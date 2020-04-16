@@ -1,0 +1,7 @@
+COMPILER Ejemplo
+
+KEYWORDS
+if = "if".
+while = "while".
+
+END Ejemplo.
