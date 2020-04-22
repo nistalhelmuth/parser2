@@ -1,4 +1,5 @@
 import sys
+from draw import drawPrettyGraph
 from posfix import conversionToPostfix
 
 class Node():
@@ -104,7 +105,6 @@ class Node():
         return self.lastpos
     
     def setFollowPos(self, table, dic):
-    #def setFollowPos(self, table = {}):
         if self.label == '.':
             for i in self.left.lastpos:
                 table[(dic[i], i)] = table[(dic[i], i)].union(self.right.firstpos)
@@ -168,8 +168,9 @@ class Node():
 
 class DFA:
 
-    def __init__(self, expre):
+    def __init__(self, exp):
         # Genera el arbol
+        expre = conversionToPostfix(exp)
         self.stack = []
         for ch in expre:
             if ch == '*':
@@ -179,7 +180,7 @@ class DFA:
                 node_A = self.stack.pop()
                 node_B = self.stack.pop()
                 self.stack.append(Node(left=node_B, label=ch, right=node_A))
-            elif ch == '+': #rr*
+            elif ch == '+': #rr+
                 node_A = self.stack.pop()
                 node_B = Node(left=node_A, label='*')
                 self.stack.append(Node(left=node_A, label='.', right=node_B))
@@ -195,10 +196,10 @@ class DFA:
 
         core = self.stack.pop()
         # Encuentra el lenguaje
-        self.language = ''
+        self.language = []
         for letter in expre:
-            if letter not in self.language and letter not in '*|().#?+':
-                self.language += (letter)
+            if letter not in self.language and letter not in '*|.#?+':
+                self.language.append(letter)
         print('positions')
         positions = core.setPositions()
         print(positions)
@@ -228,35 +229,46 @@ class DFA:
         self.start = states[0]
     
     def get_core(self):
+        drawPrettyGraph([self.start], self.states, self.transitions, self.accept, 'dfa2')
         return self.start, self.states, self.language, self.transitions, self.accept, self.groups
     
     def check(self, expre):
         def move(state, transitions, value):
-            s = state
-            if value in transitions[s].keys():
-                for element in transitions[s][value]:
-                    s = element
-            return s
+            if value in transitions[state].keys():
+                return transitions[state][value]:
+            return -1
+            
+        def new_move(state, transitions, value, table):
+            s = None
+            for key in transitions[state].keys():
+                if value in table[key]:
+                    return transitions[state][key]
+            return -1
+
+        table = {'digit': set('0123456789'), 'letter': set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')}
         s = self.start
         for letter in expre:
-            s = move(s, self.transitions, letter)
+            s = new_move(s, self.transitions, letter, table)
+            if s == -1:
+                break
         if s in self.accept:
             return True
         return False
 
-exp = "c.q*.c"
+exp = ['letter', '.', '(', 'letter', '|', 'digit', ')','*']
 
-#exp_postfix = conversionToPostfix(sys.argv[1])
-exp_postfix = conversionToPostfix(exp)
-dfa = DFA(exp_postfix)
+dfa = DFA(exp)
 dfa_core = dfa.get_core()
-print("INICIO :",dfa_core[0])
-print("ESTADOS :",dfa_core[1])
-print("TRANSICIONES :",dfa_core[3])
-print("SIMBOLOS :",dfa_core[2])
-print("ACEPTACION :",dfa_core[4])
-print("CONJUNTOS :",dfa_core[5])
+#print("INICIO :",dfa_core[0])
+#print("ESTADOS :",dfa_core[1])
+#print("TRANSICIONES :",dfa_core[3])
+#print("SIMBOLOS :",dfa_core[2])
+#print("ACEPTACION :",dfa_core[4])
+#print("CONJUNTOS :",dfa_core[5])
 
-while False:
-    test = input('to evaluate: ')
-    print(test, dfa.check(test))
+test = 'COMPILER'
+print(dfa.check(test))
+
+#while True:
+#    test = input('to evaluate: ')
+#    print(test, dfa.check(test))

@@ -9,17 +9,27 @@ class Scanner():
 
     def __init__(self, args):
         self.buffer = Buffer()
+        
         self.file = open('test1.txt','3')
+
         any_atr = set(string.printable)
         letter = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
         digit = set('0123456789')
         hexdigit = set('0123456789').union(set('ABCDEF'))
         nodigit  = any_atr.difference(digit)
+        noQuote  = any_atr.difference('"')
+        noApostrophe  = any_atr.difference("'")
 
         #ident = letter {letter | digit}.       l.(l|d)*    DFA("letter{letter|digit}")
-        #number = digit {digit}.                d.d         DFA("digit.digit") 
+        ident = DFA(['digit', '.', '(', 'letter', '|', 'digit', ')','*'])   
+        #number = digit {digit}.                d.d*         DFA("digit.digit") 
+        number = DFA(['digit', '.', 'digit', '*'])                          
         #string = '"' {anyButQuote} '"'.        ".q*."      DFA('"{'+any_atr.difference(set('""'))+'}"')
+        string = DFA(['"', '.', 'noQuote', '*', '.', '"'])      
         #char = '\'' anyButApostrophe '\''.     '.a.'       DFA("'"+any_atr.difference(set("'"))+"'")
+        char = DFA(['"', '.', 'noApostrophe', '.', '"'])      
+        
+        symbolTable = {'letter': letter, 'digit': digit, 'ident': ident}
         
         token = self.scan()
         if(token.val == 'COMPILER'):
@@ -43,7 +53,9 @@ class Scanner():
                     BasicSet = string | ident | Char [".." Char].
                     Char = char | "CHR" '(' number ')'.
                 '''
-                token = self.scan()
+                while not toke.val == characters:
+                    token = self.scan()
+                    
             if(token.val == 'KEYWORDS'):
                 '''
                     ["KEYWORDS" {KeyworDecl}]
