@@ -1,3 +1,3 @@
-COMPILER Ejemplo
+COMPILER ejemplo
 
-END Ejemplo.
+END ejemplo.
