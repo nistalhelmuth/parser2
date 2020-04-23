@@ -1,8 +1,6 @@
-operands = '{}|+'
-
 precedence = {'*':3, '?':3, '+':3, '.':2, '|':1, ' ':2} 
 
-def conversionToPostfix(exp):
+def conversionToPostfix(expresion):
     def pop(top, array):
         if not top == -1:
             top -= 1
@@ -21,16 +19,24 @@ def conversionToPostfix(exp):
     top = -1
     array = []
     output = []
-    
-    for i in exp: 
-        if i.isalnum() or i == '#' or i == '"' or i == "'": 
-            output.append(i) 
-            
-        elif i  == '(': 
-            top += 1
-            array.append(i)
 
-        elif i == ')': 
+    exp = '.'.join(expresion.split())
+    i = 0
+    while i < len(exp):
+        if exp[i].isalnum() or exp[i] in ['#', '"', "'"]:
+            count = 0
+            buff = exp[i]
+            while i+count+1 < len(exp) and ( exp[i+count+1].isalnum() or exp[i+count+1].isalnum() in ['#', '"', "'"]):
+                count += 1
+                buff = buff + exp[i+count]
+            output.append(buff) 
+            i += count
+            
+        elif exp[i] in ['(' ,'[' ,'{']: 
+            top += 1
+            array.append(exp[i])
+
+        elif exp[i] == ')': 
             while((not top == -1) and array[-1]  != '('): 
 
                 #a = pop(top, array) 
@@ -43,21 +49,57 @@ def conversionToPostfix(exp):
                 output.append(a) 
             if (not top == -1 and array[-1]  != '('): 
                 return -1
-            else: 
-
-                if not top == -1:
+            elif not top == -1:
                     top -= 1
                     array.pop()
+        
+        elif exp[i] == ']': 
+            while((not top == -1) and array[-1]  != '['): 
 
+                #a = pop(top, array) 
+                if not top == -1:
+                    top -= 1
+                    a =  array.pop()
+                else:
+                    a = "$"
+
+                output.append(a) 
+            output.append('?') 
+            if (not top == -1 and array[-1]  != '['): 
+                return -1
+            elif not top == -1:
+                    top -= 1
+                    array.pop()
+        
+        elif exp[i] == '}': 
+            while((not top == -1) and array[-1]  != '{'): 
+
+                #a = pop(top, array) 
+                if not top == -1:
+                    top -= 1
+                    a =  array.pop()
+                else:
+                    a = "$"
+
+                output.append(a) 
+            output.append('*') 
+            if (not top == -1 and array[-1]  != '{'): 
+                return -1
+            elif not top == -1:
+                    top -= 1
+                    array.pop()
+        
         else: 
-            while(not top == -1 and notGreater(i, array) and i != '*'): 
+            while(not top == -1 and notGreater(exp[i], array) and exp[i] != '*'): 
                 top -= 1
+                if exp[i] != '*':
+                    count -= 1
                 b = array.pop()
                 output.append(b) 
 
             top += 1
-            array.append(i)
-    print(output, array, top)
+            array.append(exp[i])
+        i += 1
     while not top == -1: 
         if not top == -1:
             top -= 1
@@ -65,9 +107,15 @@ def conversionToPostfix(exp):
         else:
             c = "$"
         output.append(c) 
-
     return output
 
+#print(conversionToPostfix('.'.join(['letter','{letter|digit}'])))
+#print(conversionToPostfix('abb*'))
+#print(conversionToPostfix('.'.join(['a','b','b'])))
+#print()
+#print(conversionToPostfix('(a*|b*).c'))
+#print(conversionToPostfix('.'.join(['(a*|b*)','c'])))
+#print()
+#print(conversionToPostfix('b*.a.b.b.(a|b)?'))
+#print(conversionToPostfix('.'.join(['{b}','a','b','b','[a|b]'])))
 
-print(conversionToPostfix('l (l|d)*'))
-print(conversionToPostfix(['digit','.','digit','*']))

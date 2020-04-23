@@ -45,13 +45,6 @@ class Node():
         else:
             self.nullable = False
         
-        if self.right != None and self.left != None:
-            print((self.left.label, self.label, self.right.label), self.nullable)
-        elif self.label == '*':
-            print((self.left.label, self.label), self.nullable)
-        else:
-            print((self.label), self.nullable)
-        
         return self.nullable
     
     def setFirstPos(self):
@@ -71,12 +64,6 @@ class Node():
         elif self.label != '#':
             self.firstpos.add(self.position)
 
-        if self.right != None and self.left != None:
-            print((self.left.label, self.label, self.right.label), self.firstpos)
-        elif self.label == '*':
-            print((self.left.label, self.label), self.firstpos)
-        else:
-            print((self.label), self.firstpos)
         return self.firstpos
 
     def setLastPos(self):
@@ -95,13 +82,7 @@ class Node():
             self.lastpos = self.left.setLastPos()
         elif self.label != '#':
             self.lastpos.add(self.position)   
-
-        if self.right != None and self.left != None:
-            print((self.left.label, self.label, self.right.label), self.lastpos)
-        elif self.label == '*':
-            print((self.left.label, self.label), self.lastpos)
-        else:
-            print((self.label), self.lastpos)         
+       
         return self.lastpos
     
     def setFollowPos(self, table, dic):
@@ -200,23 +181,16 @@ class DFA:
         for letter in expre:
             if letter not in self.language and letter not in '*|.#?+':
                 self.language.append(letter)
-        print('positions')
         positions = core.setPositions()
-        print(positions)
-        print('nullables')
         core.setNullable()
-        print('firstpos')
         core.setFirstPos()
-        print('lastpos')
         core.setLastPos()
-        print('followpos')
         table = {}
         dic = {}
         for position in positions:
             table[position] = set()
             dic[position[1]] = position[0]
         followtable = core.setFollowPos(table=table, dic=dic)
-        print(followtable)
         transitions, groups, states = core.evaluate(followtable = followtable, language = self.language)
         self.accept = []
         for i in range(len(groups)):
@@ -235,40 +209,36 @@ class DFA:
     def check(self, expre):
         def move(state, transitions, value):
             if value in transitions[state].keys():
-                return transitions[state][value]:
+                return transitions[state][value]
             return -1
             
-        def new_move(state, transitions, value, table):
+        def new_move(state, transitions, value):
+            table = {'digit': set('0123456789'), 'letter': set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')}
             s = None
             for key in transitions[state].keys():
                 if value in table[key]:
                     return transitions[state][key]
             return -1
 
-        table = {'digit': set('0123456789'), 'letter': set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')}
+        
         s = self.start
         for letter in expre:
-            s = new_move(s, self.transitions, letter, table)
+            s = new_move(s, self.transitions, letter)
             if s == -1:
                 break
         if s in self.accept:
             return True
         return False
 
-exp = ['letter', '.', '(', 'letter', '|', 'digit', ')','*']
-
-dfa = DFA(exp)
+'''
+#exp = ['letter', '(', 'letter', '|', 'digit', ')','*']
+ident = 'letter {letter|digit}'
+#exp = " {noQuote} "`
+#ident = ['letter','{letter|digit}']
+#print(exp)
+dfa = DFA(ident)
 dfa_core = dfa.get_core()
-#print("INICIO :",dfa_core[0])
-#print("ESTADOS :",dfa_core[1])
-#print("TRANSICIONES :",dfa_core[3])
-#print("SIMBOLOS :",dfa_core[2])
-#print("ACEPTACION :",dfa_core[4])
-#print("CONJUNTOS :",dfa_core[5])
 
-test = 'COMPILER'
+test = 'ejemplo'
 print(dfa.check(test))
-
-#while True:
-#    test = input('to evaluate: ')
-#    print(test, dfa.check(test))
+'''
