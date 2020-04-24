@@ -1,7 +1,7 @@
 import sys
 import string as strDefinition
-from .draw import drawPrettyGraph
-from .posfix import conversionToPostfix
+from draw import drawPrettyGraph
+from posfix import conversionToPostfix
 
 class Node():
     def __init__(self,  label, left=None,right=None):
@@ -150,38 +150,46 @@ class Node():
 
 class DFA:
 
-    def __init__(self, exp):
+    def __init__(self, exp, reference={}):
         # Genera el arbol
-        expre = conversionToPostfix(exp)
-        self.stack = []
-        for ch in expre:
-            if ch == '*':
-                node_A = self.stack.pop()
-                self.stack.append(Node(left=node_A,label='*'))
-            elif ch == '_' or ch =='|':
-                node_A = self.stack.pop()
-                node_B = self.stack.pop()
-                self.stack.append(Node(left=node_B, label=ch, right=node_A))
-            elif ch == '+': #rr+
-                node_A = self.stack.pop()
-                node_B = Node(left=node_A, label='*')
-                self.stack.append(Node(left=node_A, label='_', right=node_B))
-            elif ch == '?': #r|ɛ
-                node_A = self.stack.pop()
-                node_B = Node(label='#')
-                self.stack.append(Node(left=node_A, label='|', right=node_B))
-            else:
-                self.stack.append(Node(label=ch))
-        node_A = self.stack.pop()
-        node_B = Node(label='Z')
-        self.stack.append(Node(left=node_A, label='_', right=node_B))
-
-        core = self.stack.pop()
-        # Encuentra el lenguaje
+        self.expre = conversionToPostfix(exp)
+        stack = []
         self.language = []
-        for letter in expre:
-            if letter not in self.language and letter not in '*|_#?+':
+        for ch in self.expre:
+            if ch == '*':
+                node_A = stack.pop()
+                stack.append(Node(left=node_A,label='*'))
+            elif ch == '_' or ch =='|':
+                node_A = stack.pop()
+                node_B = stack.pop()
+                stack.append(Node(left=node_B, label=ch, right=node_A))
+            elif ch == '&': #rr+
+                node_A = stack.pop()
+                node_B = Node(left=node_A, label='*')
+                stack.append(Node(left=node_A, label='_', right=node_B))
+            elif ch == '?': #r|ɛ
+                node_A = stack.pop()
+                node_B = Node(label='#')
+                stack.append(Node(left=node_A, label='|', right=node_B))
+            else:
+                if ch in reference.keys():
+                    new = DFA(reference[ch], reference)
+                    stack.append(new.core)
+                    self.language = self.language + new.language
+                else:
+                    stack.append(Node(label=ch))
+        
+        self.core = stack.pop()
+
+        # Encuentra el lenguaje
+        for letter in self.expre:
+            if letter not in self.language and letter not in '*|_#?&':
                 self.language.append(letter)
+        
+        node_A = self.core
+        node_B = Node(label='Z')
+        core = Node(left=node_A, label='_', right=node_B)
+        
         positions = core.setPositions()
         core.setNullable()
         core.setFirstPos()
@@ -202,7 +210,7 @@ class DFA:
         self.groups = groups
         self.states = states
         self.start = states[0]
-    
+        
     def get_core(self):
         drawPrettyGraph([self.start], self.states, self.transitions, self.accept, 'dfa2')
         return self.start, self.states, self.language, self.transitions, self.accept, self.groups
@@ -237,8 +245,9 @@ class DFA:
 
 #ident = 'letter {letter|digit}'
 #string = '" {noQuote} "'
-#dfa = DFA(".")
-#dfa_core = dfa.get_core()
-#test = '.'
+mySet = "B"
+dfa = DFA("{(+|-) (string|ident|char)}", {'ident':'letter {letter|digit}','string': '" {noQuote} "', 'char':"' noApostrophe '"})
+dfa_core = dfa.get_core()
+#test = '"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"'
 
 #print(dfa.check(test))

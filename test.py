@@ -30,7 +30,7 @@ class Buffer():
     def __init__ (self, stream):
         file = open(stream, 'r')
         words = [word for line in file.readlines() for word in line.split()]
-        print(words)
+        #print(words)
         file.close()
         self.currentWord =  Node(words)
         self.nextWord = self.currentWord
@@ -127,11 +127,12 @@ class Scanner():
             BasicSet = string | ident | Char [".." Char].
             Char = char | "CHR" '(' number ')'.
             ident = Set.
-            Set = (string | ident | char | "CHR" '(' number ')' [".." char | "CHR" '(' number ')']) { ('+'|'-') BasicSet }.
+            Set = ((string|ident|char) {('+'|'-') (string|ident|char)}.
         '''
         characters = {}
         token = self.peek()
         state = 0
+        BasicSet = DFA('ident|string|char', {'ident':'letter {letter|digit}','string': '" {noQuote} "', 'char':"' noApostrophe '"})
         while token.code < 50 and state != -1:
             if state == 0 and self.ident.check(token.val):
                 name = token.val
@@ -140,20 +141,22 @@ class Scanner():
             elif state == 1 and self.equal.check(token.val):
                 state += 1
                 token = self.peek()
-            elif state == 3 and self.string.check(token.val):
+            elif state == 2 and self.string.check(token.val):
                 value = token.val
                 state += 1
                 token = self.peek()
-            elif state == 4 and self.period.check(token.val):
-                keywords[name] = value
-                for i in range(state):
+            elif state == 3 and self.period.check(token.val):
+                characters[name] = value[1:-1]
+                print("CHARACTER ", name, "ADDED")
+                for i in range(state+1):
                     self.scan()
+                token = self.peek()
                 state = 0
             else: 
-                state = -1
                 self.resetPeek()
-                print('KEYWORDS error', token.value, token.code)
-
+                print('CHARACTERS error', token.val, token.code, state)
+                state = -1
+        print(characters)
         return characters
 
     def KEYWORDS(self):
@@ -178,7 +181,7 @@ class Scanner():
                 token = self.peek()
             elif state == 3 and self.period.check(token.val):
                 keywords[name] = value[1:-1]
-                print("KEYWORD ", value, "ADDED")
+                print("KEYWORD ", name, "ADDED")
                 for i in range(state+1):
                     self.scan()
                 token = self.peek()
@@ -200,19 +203,34 @@ class Scanner():
             TokenFactor = Symbol | '(' TokenExpr ')' | '[' TokenExpr ']' | '{' TokenExpr '}'.
             Symbol = ident | string | char
         '''
-        return
         tokens = {}
-
-        Symbol = superDFA('ident | string | char')
-
-        TokenDecl = superDFA([ident, DFA('[= TokenExpr]'), DFA('[EXCEPT KEYWORDS].')])
-        while TokenDecl.check():
-            name, value = TokenDecl.get()
-            if name != None:
-                tokens[name] = value
+        token = self.peek()
+        state = 0
+        while token.code < 50 and state != -1:
+            if state == 0 and self.ident.check(token.val):
+                name = token.val
+                state += 1
+                token = self.peek()
+            elif state == 1 and self.equal.check(token.val):
+                state += 1
+                token = self.peek()
+            elif state == 2 and self.string.check(token.val):
+                value = token.val
+                state += 1
+                token = self.peek()
+            elif state == 3 and self.period.check(token.val):
+                tokens[name] = value[1:-1]
+                print("TOKEN ", name, "ADDED")
+                for i in range(state+1):
+                    self.scan()
+                token = self.peek()
+                state = 0
             else: 
-                print('KEYWORDS error')
-
+                self.resetPeek()
+                print('TOKEN error', token.val, token.code, state)
+                state = -1
+        
+        print(tokens)
         return tokens
 
     def COMPILER(self):
@@ -229,6 +247,7 @@ class Scanner():
                 print('CHARACTERS started')
                 self.characters = self.CHARACTERS()
                 token = self.scan()
+                print(token.val)
                 print('CHARACTERS ended')
             if (token.val == 'KEYWORDS'):
                 print('KEYWORDS started')
@@ -278,7 +297,7 @@ class Scanner():
 
 
 def main():
-    scanner = Scanner("./tests/test1.txt")
+    scanner = Scanner("./tests/test2.txt")
     scanner.COMPILER()
     #args = scanner.start()
     
