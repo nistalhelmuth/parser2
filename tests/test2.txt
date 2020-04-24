@@ -1,0 +1,11 @@
+COMPILER Ejemplo
+(.
+/*--------------Scanner Specification----------*/
+.)
+
+CHARACTERS
+letter = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".
+digit = "0123456789".
+hexdigit = digit+"ABCDEF".
+
+END Ejemplo.

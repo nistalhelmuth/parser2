@@ -1,62 +1,5 @@
 import string
-from dfa import DFA
-
-class Buffer():
-    '''
-        This is an auxiliary class that is used by the scanner (and possibly by 
-        other classes) to read the source stream into a buffer and retrieve 
-        portions of it:
-    '''
-    def __init__ (self, stream):
-        self.file = open(stream, 'r')
-        self.currentLine = self.file.readline().split()
-        self.buffer = self.file
-        self.line = 0
-        self.word = 0
-
-    def read(self):
-        '''
-            Read() returns the next character or 65536 if the input is exhausted
-        '''
-        
-        word = ''
-        if self.word < len(self.currentLine):
-            word = self.currentLine[self.word]
-            self.word += 1
-        else:
-            self.currentLine = self.file.readline().split()
-            self.word = 0
-            if self.currentLine != []:
-                word = self.currentLine[self.word]
-            self.word += 1
-        return word
-
-    def peek(self):
-        '''
-            Peek() allows the scanner to read characters ahead without consuming them
-        '''
-
-        word = None
-        if self.word < len(self.currentLine) - 1:
-            word = self.currentLine[self.word + 1]
-        return word
-
-    def getpos(self):
-        return self.word, self.line
-    
-    def setpos(self, word, line):
-        '''
-            Pos allows the scanner to get or set the reading position, which is initially 0
-        '''
-        self.word = word
-        self.line = line
-
-    def getString(self, beginning, end):
-        '''
-            GetString(beg, end) can be used to retrieve the text interval 
-            [beg..end[ from the input stream, where beg and end are byte positions.
-        '''
-        print('soon')
+from utils.dfa import DFA
 
 class Token():
     def __init__(self, code, val, pos=None, charPos=None, line=None, col=None):
@@ -66,6 +9,84 @@ class Token():
         self.charPos = charPos             # token position in the source text // (in characters starting at 0)
         self.line = line                   # line number (starting at 1)
         self.col = col                     # column number (starting at 1)
+
+
+class Node():
+    def __init__(self, words):
+        if len(words) == 0:
+            return
+        self.value = words[0]
+        self.next = None
+        if 1 < len(words):
+            self.next = Node(words[1:])
+        
+
+class Buffer():
+    '''
+        This is an auxiliary class that is used by the scanner (and possibly by 
+        other classes) to read the source stream into a buffer and retrieve 
+        portions of it:
+    '''
+    def __init__ (self, stream):
+        file = open(stream, 'r')
+        words = [word for line in file.readlines() for word in line.split()]
+        print(words)
+        file.close()
+        self.currentWord =  Node(words)
+        self.nextWord = self.currentWord
+    
+    def definition(self, value):
+        code = None
+        if value == '':
+            code = 0
+        if value == '.':
+            code = 0
+        if value == '=':
+            code = 0
+        if value == '+':
+            code = 0
+        if value == '-':
+            code = 0
+        elif value == 'COMPILER':
+            code = 50
+        elif value == 'CHARACTERS':
+            code = 60
+        elif value == 'KEYWORDS':
+            code = 70
+        elif value == 'TOKENS':
+            code = 80
+        elif value == 'EXCEPT':
+            code = 80
+        elif value == 'KEYWORDS':
+            code = 80
+        elif value == 'END':
+            code = 90
+        else:
+            code = -1
+        return code
+
+    def read(self):
+        '''
+            Read() returns the next character or 65536 if the input is exhausted
+        '''
+        
+        word = self.currentWord.value
+        self.currentWord = self.currentWord.next
+        self.nextWord = self.currentWord
+        return Token(self.definition(word), word)
+
+    def peek(self):
+        '''
+            Peek() allows the scanner to read characters ahead without consuming them
+        '''
+
+        word = self.nextWord.value
+        self.nextWord = self.nextWord.next
+        return Token(self.definition(word), word)
+    
+    def resetPeek(self):
+        self.nextWord = self.currentWord
+
 
 class Scanner():
     '''
@@ -79,18 +100,20 @@ class Scanner():
     def __init__(self, file):
         self.buffer = Buffer(file)
 
-        any_atr = set()
+        any_atr = set(string.printable)
         hexdigit = set('0123456789').union(set('ABCDEF'))
-        noApostrophe  = any_atr.difference("'")
+        noApostrophe  = any_atr.difference(set("'"))
         letter = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
         digit = set('0123456789')
         nodigit  = any_atr.difference(digit)
-        noQuote  = any_atr.difference('"')
+        noQuote  = any_atr.difference(set('"'))
 
         self.ident = DFA('letter {letter|digit}')
-        #self.string =  DFA('" {noQuote} "')
-        #self.number =  DFA('digit {digit}')
-        #self.char =  DFA("'noApostrophe'")
+        self.string =  DFA('" {noQuote} "')
+        self.number =  DFA('digit {digit}')
+        self.char =  DFA("' noApostrophe '")
+        self.equal =  DFA("=")
+        self.period =  DFA(".")
 
         '''
         symbolTable = {'letter': letter, 'digit': digit, 'ident': ident}
@@ -106,19 +129,32 @@ class Scanner():
             ident = Set.
             Set = (string | ident | char | "CHR" '(' number ')' [".." char | "CHR" '(' number ')']) { ('+'|'-') BasicSet }.
         '''
-        character = {}
-        Char = superDFA('char | CHR(number)')
-        BasicSet = superDFA(['string | indent | Char[".." Char]', ])
-        Set = superDFA([BasicSet, DFA('{(+|-)BasicSet}')])
-        Set = superDFA([ident, DFA('='), Set, DFA('.')])
-        while SetDecl.check():
-            name, value = SetDecl.get()
-            if name != None:
-                character[name] = value
+        characters = {}
+        token = self.peek()
+        state = 0
+        while token.code < 50 and state != -1:
+            if state == 0 and self.ident.check(token.val):
+                name = token.val
+                state += 1
+                token = self.peek()
+            elif state == 1 and self.equal.check(token.val):
+                state += 1
+                token = self.peek()
+            elif state == 3 and self.string.check(token.val):
+                value = token.val
+                state += 1
+                token = self.peek()
+            elif state == 4 and self.period.check(token.val):
+                keywords[name] = value
+                for i in range(state):
+                    self.scan()
+                state = 0
             else: 
-                print('KEYWORDS error')
+                state = -1
+                self.resetPeek()
+                print('KEYWORDS error', token.value, token.code)
 
-        return character
+        return characters
 
     def KEYWORDS(self):
         '''
@@ -126,14 +162,33 @@ class Scanner():
             KeywordDecl = ident '=' string '.'
         '''
         keywords = {}
-        keywordDecl = superDFA([ident, DFA('='), string, DFA('.')])
-        while keywordDecl.check():
-            name, value = keywordDecl.get()
-            if name != None:
-                keywords[name] = value
+        token = self.peek()
+        state = 0
+        while token.code < 50 and state != -1:
+            if state == 0 and self.ident.check(token.val):
+                name = token.val
+                state += 1
+                token = self.peek()
+            elif state == 1 and self.equal.check(token.val):
+                state += 1
+                token = self.peek()
+            elif state == 2 and self.string.check(token.val):
+                value = token.val
+                state += 1
+                token = self.peek()
+            elif state == 3 and self.period.check(token.val):
+                keywords[name] = value[1:-1]
+                print("KEYWORD ", value, "ADDED")
+                for i in range(state+1):
+                    self.scan()
+                token = self.peek()
+                state = 0
             else: 
-                print('KEYWORDS error')
-
+                self.resetPeek()
+                print('KEYWORDS error', token.val, token.code, state)
+                state = -1
+        
+        print(keywords)
         return keywords
     
     def TOKENS(self):
@@ -145,6 +200,7 @@ class Scanner():
             TokenFactor = Symbol | '(' TokenExpr ')' | '[' TokenExpr ']' | '{' TokenExpr '}'.
             Symbol = ident | string | char
         '''
+        return
         tokens = {}
 
         Symbol = superDFA('ident | string | char')
@@ -169,46 +225,30 @@ class Scanner():
             print('COMPILER started')
             name = token.val
             token = self.scan()
-            print(token.val)
             if (token.val == 'CHARACTERS'):
                 print('CHARACTERS started')
                 self.characters = self.CHARACTERS()
                 token = self.scan()
+                print('CHARACTERS ended')
             if (token.val == 'KEYWORDS'):
                 print('KEYWORDS started')
                 self.keywords = self.KEYWORDS()
                 token = self.scan()
+                print('KEYWORDS ended')
             if (token.val == 'TOKENS'):
                 print('TOKENS started')
                 self.tokens = self.TOKENS()
                 token = self.scan()
+                print('TOKENS ended')
             if (token.val == 'END'):
                 token = self.scan()
                 if(token.val == (name+'.')):
                     print("succesfully exit")
                 else:
                     print("unexpected END")
+            print('COMPILER ended')
         else:
             print("unexpected compiler name")
-    
-
-    def definition(self, value):
-        code = None
-        if value == '':
-            code = 0
-        elif value == 'COMPILER':
-            code = 50
-        elif value == 'CHARACTERS':
-            code = 60
-        elif value == 'KEYWORDS':
-            code = 70
-        elif value == 'TOKENS':
-            code = 80
-        elif value == 'END':
-            code = 90
-        else:
-            code = -1
-        return code
     
     def scan(self):
         '''
@@ -218,28 +258,27 @@ class Scanner():
             or by invalid characters) Scan() returns a special token kind, which normally causes
             the parser to report an error.
         '''
-        word = self.buffer.read()
-        if word == '':
-            return self.scan()
-        return Token(self.definition(word),word)
+        token = self.buffer.read()
+        #print('token read: ', token.code, token.val)
+        return token
 
         
-    def peek(self, args):
+    def peek(self):
         '''
             Peek() can be used to read one or several tokens ahead without removing them from
             the input stream. With every call of Scan() (i.e. every time a token has been 
             recognized) the peek position is set to the scan position so that the first Peek()
             after a Scan() returns the first yet unscanned token.
         '''
+        return self.buffer.peek()
     
-    def resetPeek(self, args):
-        '''
-            The method ResetPeek() can be used to reset the peek position to the scan position
-            after several calls of Peek().
-        '''
+    def resetPeek(self):
+        self.buffer.resetPeek()
+    
+
 
 def main():
-    scanner = Scanner("test1.txt")
+    scanner = Scanner("./tests/test1.txt")
     scanner.COMPILER()
     #args = scanner.start()
     

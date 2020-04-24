@@ -1,0 +1,10 @@
+COMPILER Ejemplo
+(.
+/*--------------Scanner Specification----------*/
+.)
+
+KEYWORDS
+if="if".
+while="while".
+
+END Ejemplo.

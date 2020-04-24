@@ -1,0 +1,14 @@
+COMPILER ejemplo
+
+CHARACTERS
+
+KEYWORDS
+
+while = "while" .
+do = "do" .
+if = "if" .
+switch = "switch" .
+
+TOKENS
+
+END ejemplo.
