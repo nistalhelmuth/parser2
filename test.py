@@ -28,9 +28,50 @@ class Buffer():
         portions of it:
     '''
     def __init__ (self, stream):
+        def clean(word, last=False):
+            if word.isalnum():
+                return [word]
+            i = 0
+            words = []
+            buff = ''
+            ignore = False
+            while i < len(word):
+                if word[i] in ['"', "'"]:
+                    if ignore:
+                        words.append(buff+word[i])
+                        buff = ''
+                    else:
+                        buff = buff + word[i]
+                    ignore = not ignore
+                elif not ignore and i < len(word)-1 and word[i] == '.' and word[i+1] == '.':
+                    if len(buff) > 0:
+                        words.append(buff)
+                    words.append(word[i] + word[i+1])
+                    buff = ''
+                    i += 1
+                elif not ignore and word[i] in ['=','+','-','.']:
+                    if len(buff) > 0:
+                        words.append(buff)
+                    words.append(word[i])
+                    buff = ''
+                else:
+                    buff = buff + word[i]
+                    
+                i += 1
+            return words
+
         file = open(stream, 'r')
-        words = [word for line in file.readlines() for word in line.split()]
-        #print(words)
+        words = []
+        for text in file.readlines():
+            line = text.split()
+            new_line = []
+            for i in range(len(line)):
+                if i == len(line)-1:
+                    new_line = new_line + clean(line[i], True)
+                else:
+                    new_line = new_line + clean(line[i])
+            print(new_line)
+
         file.close()
         self.currentWord =  Node(words)
         self.nextWord = self.currentWord
@@ -100,13 +141,13 @@ class Scanner():
     def __init__(self, file):
         self.buffer = Buffer(file)
 
-        any_atr = set(string.printable)
-        hexdigit = set('0123456789').union(set('ABCDEF'))
-        noApostrophe  = any_atr.difference(set("'"))
-        letter = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
-        digit = set('0123456789')
-        nodigit  = any_atr.difference(digit)
-        noQuote  = any_atr.difference(set('"'))
+        #any_atr = set(string.printable)
+        #self.any_atr = DFA('|'.join(list(any_atr)))
+        self.hexdigit = DFA('|'.join(list(set('0123456789').union(set('ABCDEF')))))
+        #self.noApostrophe  = DFA('|'.join(list(any_atr.difference(set("'")))))
+        self.letter = DFA('a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z')
+        self.digit = DFA('0|1|2|3|4|5|6|7|8|9')
+        #self.noQuote  = DFA('|'.join(list(any_atr.difference(set('"')))))
 
         self.ident = DFA('letter {letter|digit}')
         self.string =  DFA('" {noQuote} "')
@@ -115,10 +156,6 @@ class Scanner():
         self.equal =  DFA("=")
         self.period =  DFA(".")
 
-        '''
-        symbolTable = {'letter': letter, 'digit': digit, 'ident': ident}
-        '''
-        
     def CHARACTERS(self):
         '''
             ["CHARACTERS" {SetDecl}]
@@ -127,8 +164,9 @@ class Scanner():
             BasicSet = string | ident | Char [".." Char].
             Char = char | "CHR" '(' number ')'.
             ident = Set.
-            Set = ((string|ident|char) {('+'|'-') (string|ident|char)}.
+            Set = ((string|ident|char) {(+|-) (string|ident|char)}.
         '''
+        return
         characters = {}
         token = self.peek()
         state = 0
@@ -153,8 +191,8 @@ class Scanner():
                 token = self.peek()
                 state = 0
             else: 
-                self.resetPeek()
                 print('CHARACTERS error', token.val, token.code, state)
+                self.resetPeek()
                 state = -1
         print(characters)
         return characters
@@ -163,6 +201,7 @@ class Scanner():
         '''
             ["KEYWORDS" {KeyworDecl}]
             KeywordDecl = ident '=' string '.'
+            KeywordDecl = DFA('ident = string .', {'ident': self.ident, 'string': self.string})
         '''
         keywords = {}
         token = self.peek()
@@ -187,8 +226,8 @@ class Scanner():
                 token = self.peek()
                 state = 0
             else: 
-                self.resetPeek()
                 print('KEYWORDS error', token.val, token.code, state)
+                self.resetPeek()
                 state = -1
         
         print(keywords)
@@ -298,7 +337,7 @@ class Scanner():
 
 def main():
     scanner = Scanner("./tests/test2.txt")
-    scanner.COMPILER()
+    #scanner.COMPILER()
     #args = scanner.start()
     
 

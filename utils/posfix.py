@@ -19,21 +19,25 @@ def conversionToPostfix(expresion):
     top = -1
     array = []
     output = []
-    #print(expresion)
     exp = '_'.join(expresion.split())
-    #print(exp)
     i = 0
     while i < len(exp):
-        if exp[i].isalnum() or exp[i] in ['#', '.', '+', '-', '"', "'"]:
+        if exp[i].isalnum() or exp[i] in ['#', '.', '+', '-', ',', '=']:
             count = 0
             buff = exp[i]
-            while i+count+1 < len(exp) and ( exp[i+count+1].isalnum() or exp[i+count+1].isalnum() in ['#', '"', "'"]):
+            while i+count+1 < len(exp) and ( exp[i+count+1].isalnum() or exp[i+count+1] in ['#', '.', '+', '-', ',', '=']):
                 count += 1
                 buff = buff + exp[i+count]
             output.append(buff) 
             i += count
-        #if exp[i] in ['"', "'"]:
-
+        elif exp[i] in ['"', "'"]:
+            count = 0
+            buff = exp[i]
+            while i+count+1 < len(exp) and exp[i+count+1] in ['"', "'"]:
+                count += 1
+                buff = buff + exp[i+count]
+            output.append(buff) 
+            i += count
             
         elif exp[i] in ['(' ,'[' ,'{']: 
             top += 1
@@ -110,7 +114,6 @@ def conversionToPostfix(expresion):
         else:
             c = "$"
         output.append(c) 
-    #print(output)
     return output
 
 #print(conversionToPostfix('.'.join(['letter','{letter|digit}'])))

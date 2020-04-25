@@ -1,7 +1,7 @@
 import sys
 import string as strDefinition
-from draw import drawPrettyGraph
-from posfix import conversionToPostfix
+from .draw import drawPrettyGraph
+from .posfix import conversionToPostfix
 
 class Node():
     def __init__(self,  label, left=None,right=None):
@@ -116,8 +116,6 @@ class Node():
                     if (letter, p) in followtable.keys():
                         A = followtable[(letter, p)]
                         U = U.union(A)
-                #if len(U) == 0:
-                #    continue
                 if U not in Dstates:
                     Dstates.append(U)
 
@@ -173,9 +171,8 @@ class DFA:
                 stack.append(Node(left=node_A, label='|', right=node_B))
             else:
                 if ch in reference.keys():
-                    new = DFA(reference[ch], reference)
-                    stack.append(new.core)
-                    self.language = self.language + new.language
+                    stack.append(reference[ch].core)
+                    self.language = self.language + reference[ch].language
                 else:
                     stack.append(Node(label=ch))
         
@@ -183,7 +180,7 @@ class DFA:
 
         # Encuentra el lenguaje
         for letter in self.expre:
-            if letter not in self.language and letter not in '*|_#?&':
+            if letter not in self.language and letter not in '*|_#?&' and letter not in reference.keys():
                 self.language.append(letter)
         
         node_A = self.core
@@ -245,9 +242,14 @@ class DFA:
 
 #ident = 'letter {letter|digit}'
 #string = '" {noQuote} "'
-mySet = "B"
-dfa = DFA("{(+|-) (string|ident|char)}", {'ident':'letter {letter|digit}','string': '" {noQuote} "', 'char':"' noApostrophe '"})
-dfa_core = dfa.get_core()
+#dfa = DFA("{(+|-) (string|ident|(char [. . char])))}", {'ident':'letter {letter|digit}','string': '" {noQuote} "', 'char':"' noApostrophe '"})
+#letter = DFA('a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z')
+#digit = DFA('0|1|2|3|4|5|6|7|8|9')
+#ident = DFA('letter {letter|digit}', {'digit': digit})
+#string = DFA('" {noQuote} "')
+#dfa = DFA("ident = string .", {'string': string, 'ident': ident})
+#keyword = DFA('ident = string .', {'ident': ident})
+#keyword.get_core()
 #test = '"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"'
 
 #print(dfa.check(test))

@@ -1,0 +1,4 @@
+hexdigit = digit + "ABCDEF".
+hexterm = 'H'.
+whitespace = CHR(13)+eol+tab+CHR(13).
+sign ='+'+'-'.

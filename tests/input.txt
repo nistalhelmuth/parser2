@@ -6,7 +6,7 @@ COMPILER Ejemplo
 CHARACTERS
 letter = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".
 digit = "0123456789".
-hexdigit = digit+"ABCDEF".
+hexdigit = digit+"ABCDEF" .
 
 KEYWORDS
 if = "if".
