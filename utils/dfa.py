@@ -220,7 +220,7 @@ class DFA:
             
         def new_move(state, transitions, value):
             any_atr = set(strDefinition.printable)
-            table = {'digit': set('0123456789'), 'letter': set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'noQuote': set(strDefinition.printable).difference(set('"'))}
+            table = {'noQuote': set(strDefinition.printable).difference(set('"')), 'noApostrophe': set(strDefinition.printable).difference(set("'"))}
             if value in transitions[state].keys():
                 return transitions[state][value]
 
@@ -250,6 +250,14 @@ class DFA:
 #dfa = DFA("ident = string .", {'string': string, 'ident': ident})
 #keyword = DFA('ident = string .', {'ident': ident})
 #keyword.get_core()
-#test = '"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"'
-
-#print(dfa.check(test))
+#dfa = DFA('BasicSet {(+|-) BasicSet}')
+#dfa = DFA('" {noQuote} "')
+#dfa = DFA("' noApostrophe '")
+#dfa.get_core()
+#string = DFA('" {noQuote} "')
+#basicset = DFA('string|ident|char', {'string': string})
+#mySet = DFA('BasicSet {(+|-) BasicSet}', {'BasicSet':basicset})
+#mySet.get_core()
+#test = '"abcdefghijklmnSTUVWXYZ"'
+#
+#print(mySet.check(test))

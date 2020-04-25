@@ -4,10 +4,10 @@ CHARACTERS
 
 KEYWORDS
 
-while = "while" .
-do = "do" .
-if = "if" .
-switch = "switch" .
+while = "while".
+do = "do".
+if = "if".
+switch = "switch"
 
 TOKENS
 

@@ -1,8 +1,6 @@
 COMPILER Ejemplo
 
 CHARACTERS
-whitespace = CHR(13)+eol+tab+CHR(13).
-sign ='+'+'-'.
 letter = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" .
 digit = "0123456789" .
 
@@ -11,7 +9,7 @@ KEYWORDS
 while = "while".
 do = "do".
 if = "if".
-switch = "switch"
+switch = "switch".
 
 TOKENS
 

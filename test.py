@@ -17,8 +17,7 @@ class Node():
             return
         self.value = words[0]
         self.next = None
-        if 1 < len(words):
-            self.next = Node(words[1:])
+        self.next = Node(words[1:])
         
 
 class Buffer():
@@ -28,7 +27,7 @@ class Buffer():
         portions of it:
     '''
     def __init__ (self, stream):
-        def clean(word, last=False):
+        def clean(word):
             if word.isalnum():
                 return [word]
             i = 0
@@ -66,12 +65,8 @@ class Buffer():
             line = text.split()
             new_line = []
             for i in range(len(line)):
-                if i == len(line)-1:
-                    new_line = new_line + clean(line[i], True)
-                else:
-                    new_line = new_line + clean(line[i])
-            print(new_line)
-
+                new_line = new_line + clean(line[i])
+            words = words + new_line
         file.close()
         self.currentWord =  Node(words)
         self.nextWord = self.currentWord
@@ -149,9 +144,9 @@ class Scanner():
         self.digit = DFA('0|1|2|3|4|5|6|7|8|9')
         #self.noQuote  = DFA('|'.join(list(any_atr.difference(set('"')))))
 
-        self.ident = DFA('letter {letter|digit}')
+        self.ident = DFA('letter {letter|digit}', {'letter': self.letter, 'digit': self.digit})
         self.string =  DFA('" {noQuote} "')
-        self.number =  DFA('digit {digit}')
+        self.number =  DFA('digit {digit}', {'digit': self.digit})
         self.char =  DFA("' noApostrophe '")
         self.equal =  DFA("=")
         self.period =  DFA(".")
@@ -163,15 +158,15 @@ class Scanner():
             Set = BasicSet { ('+'|'-') BasicSet }.
             BasicSet = string | ident | Char [".." Char].
             Char = char | "CHR" '(' number ')'.
-            ident = Set.
-            Set = ((string|ident|char) {(+|-) (string|ident|char)}.
         '''
-        return
         characters = {}
         token = self.peek()
         state = 0
-        BasicSet = DFA('ident|string|char', {'ident':'letter {letter|digit}','string': '" {noQuote} "', 'char':"' noApostrophe '"})
-        while token.code < 50 and state != -1:
+        char = DFA("char|CHR'('number')'")
+        basicset = DFA('string|ident|char', {'string': self.string})
+        mySet = DFA('BasicSet {(+|-) BasicSet}', {'BasicSet': basicset})
+        while token.code < 50:
+            token = self.scan()
             if state == 0 and self.ident.check(token.val):
                 name = token.val
                 state += 1
@@ -179,21 +174,20 @@ class Scanner():
             elif state == 1 and self.equal.check(token.val):
                 state += 1
                 token = self.peek()
-            elif state == 2 and self.string.check(token.val):
+            elif state == 2 and mySet.check(token.val):
                 value = token.val
                 state += 1
                 token = self.peek()
             elif state == 3 and self.period.check(token.val):
                 characters[name] = value[1:-1]
                 print("CHARACTER ", name, "ADDED")
-                for i in range(state+1):
-                    self.scan()
-                token = self.peek()
                 state = 0
+                token = self.peek()
             else: 
-                print('CHARACTERS error', token.val, token.code, state)
-                self.resetPeek()
-                state = -1
+                errors = {0:'ident', 1:'equal', 2:'set', 3:'period'}
+                print('CHARACTERS error: read', token.val, 'expected ', errors[state])
+                state = 0
+        print(token.val)
         print(characters)
         return characters
 
@@ -206,7 +200,8 @@ class Scanner():
         keywords = {}
         token = self.peek()
         state = 0
-        while token.code < 50 and state != -1:
+        while token.code < 50:
+            token = self.scan()
             if state == 0 and self.ident.check(token.val):
                 name = token.val
                 state += 1
@@ -221,14 +216,12 @@ class Scanner():
             elif state == 3 and self.period.check(token.val):
                 keywords[name] = value[1:-1]
                 print("KEYWORD ", name, "ADDED")
-                for i in range(state+1):
-                    self.scan()
-                token = self.peek()
                 state = 0
+                token = self.peek()
             else: 
-                print('KEYWORDS error', token.val, token.code, state)
-                self.resetPeek()
-                state = -1
+                errors = {0:'ident', 1:'equal', 2:'string', 3:'period'}
+                print('KEYWORDS error: read', token.val, 'expected ', errors[state])
+                state = 0
         
         print(keywords)
         return keywords
@@ -286,7 +279,6 @@ class Scanner():
                 print('CHARACTERS started')
                 self.characters = self.CHARACTERS()
                 token = self.scan()
-                print(token.val)
                 print('CHARACTERS ended')
             if (token.val == 'KEYWORDS'):
                 print('KEYWORDS started')
@@ -296,7 +288,6 @@ class Scanner():
             if (token.val == 'TOKENS'):
                 print('TOKENS started')
                 self.tokens = self.TOKENS()
-                token = self.scan()
                 print('TOKENS ended')
             if (token.val == 'END'):
                 token = self.scan()
@@ -337,7 +328,7 @@ class Scanner():
 
 def main():
     scanner = Scanner("./tests/test2.txt")
-    #scanner.COMPILER()
+    scanner.COMPILER()
     #args = scanner.start()
     
 
