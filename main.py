@@ -147,9 +147,13 @@ class Scanner():
         '''
         tokens = {}
 
-        Symbol = superDFA('ident | string | char')
+        Symbol = DFA('ident|string|char')
+        TokenFactor = DFA('Symbol | TokenExpr')
+        TokenTerm = DFA("TokenFactor {TokenFactor}")
+        TokenExpr = DFA("TokenTerm {'|' TokenTerm }")
+        
 
-        TokenDecl = superDFA([ident, DFA('[= TokenExpr]'), DFA('[EXCEPT KEYWORDS].')])
+        #TokenDecl = superDFA([ident, DFA('[= TokenExpr]'), DFA('[EXCEPT KEYWORDS].')])
         while TokenDecl.check():
             name, value = TokenDecl.get()
             if name != None:

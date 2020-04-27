@@ -22,7 +22,10 @@ def conversionToPostfix(expresion):
     exp = '_'.join(expresion.split())
     i = 0
     while i < len(exp):
-        if exp[i].isalnum() or exp[i] in ['#', '.', '+', '-', ',', '=']:
+        if i < len(exp)-2 and exp[i] == "'" and exp[i+2] == "'":
+            output.append(exp[i+1])
+            i += 3
+        elif exp[i].isalnum() or exp[i] in ['#', '.', '+', '-', ',', '=', '"', "'"]:
             count = 0
             buff = exp[i]
             while i+count+1 < len(exp) and ( exp[i+count+1].isalnum() or exp[i+count+1] in ['#', '.', '+', '-', ',', '=']):
@@ -30,19 +33,24 @@ def conversionToPostfix(expresion):
                 buff = buff + exp[i+count]
             output.append(buff) 
             i += count
-        elif exp[i] in ['"', "'"]:
-            count = 0
-            buff = exp[i]
-            while i+count+1 < len(exp) and exp[i+count+1] in ['"', "'"]:
-                count += 1
-                buff = buff + exp[i+count]
-            output.append(buff) 
-            i += count
+            '''
+            elif i<len(exp)-2 and (exp[i:i+3] == '"("' or exp[i:i+3] == "'('"):
+                count = 3
+                buff = ''
+                while i+count < len(exp)-3 and (exp[i+count: i+count+3] != '")"' or exp[i+count: i+count+3] != "')'"):
+                    buff = buff + exp[i+count]
+                    count += 1
+                output.append('('+buff+')') 
+                i += count + count
+            '''
             
         elif exp[i] in ['(' ,'[' ,'{']: 
             top += 1
             array.append(exp[i])
 
+        elif exp[i] in [')' ,']' ,'}'] and len(array) == 0: 
+            top += 1
+            array.append(exp[i])
         elif exp[i] == ')': 
             while((not top == -1) and array[-1]  != '('): 
 
@@ -115,14 +123,3 @@ def conversionToPostfix(expresion):
             c = "$"
         output.append(c) 
     return output
-
-#print(conversionToPostfix('.'.join(['letter','{letter|digit}'])))
-#print(conversionToPostfix('abb*'))
-#print(conversionToPostfix('.'.join(['a','b','b'])))
-#print()
-#print(conversionToPostfix('(a*|b*).c'))
-#print(conversionToPostfix('.'.join(['(a*|b*)','c'])))
-#print()
-#print(conversionToPostfix('b*.a.b.b.(a|b)?'))
-#print(conversionToPostfix('.'.join(['{b}','a','b','b','[a|b]'])))
-

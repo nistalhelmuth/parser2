@@ -67,6 +67,7 @@ class Buffer():
             for i in range(len(line)):
                 new_line = new_line + clean(line[i])
             words = words + new_line
+
         file.close()
         self.currentWord =  Node(words)
         self.nextWord = self.currentWord
@@ -90,10 +91,6 @@ class Buffer():
         elif value == 'KEYWORDS':
             code = 70
         elif value == 'TOKENS':
-            code = 80
-        elif value == 'EXCEPT':
-            code = 80
-        elif value == 'KEYWORDS':
             code = 80
         elif value == 'END':
             code = 90
@@ -150,6 +147,8 @@ class Scanner():
         self.char =  DFA("' noApostrophe '")
         self.equal =  DFA("=")
         self.period =  DFA(".")
+        self.plus =  DFA("+")
+        self.minus =  DFA("-")
 
     def CHARACTERS(self):
         '''
@@ -162,32 +161,79 @@ class Scanner():
         characters = {}
         token = self.peek()
         state = 0
+
         char = DFA("char|CHR'('number')'")
-        basicset = DFA('string|ident|char', {'string': self.string})
-        mySet = DFA('BasicSet {(+|-) BasicSet}', {'BasicSet': basicset})
+        char = self.char
+        basicset = DFA('string|ident', {'string': self.string, 'ident': self.ident, 'char':self.char})
+        mySet = DFA('BasicSet {(+|-) BasicSet}',{'BasicSet': basicset})
+
+        M = {'S': [(self.string, ['B', "S'"]), (self.ident, ['B',"S'"]), (char, ['B',"S'"])], 'B': [(self.string, ['s']), (self.ident, ['i']), (char, ['c'])], "S'": [(self.plus, ['+', 'B']), (self.minus, ['-', 'B']), (self.period, [])]}
         while token.code < 50:
             token = self.scan()
+            
             if state == 0 and self.ident.check(token.val):
                 name = token.val
                 state += 1
                 token = self.peek()
+                values = []
             elif state == 1 and self.equal.check(token.val):
                 state += 1
-                token = self.peek()
-            elif state == 2 and mySet.check(token.val):
-                value = token.val
-                state += 1
-                token = self.peek()
-            elif state == 3 and self.period.check(token.val):
-                characters[name] = value[1:-1]
-                print("CHARACTER ", name, "ADDED")
+                token = self.peek()            
+            elif state == 2 and self.period.check(token.val):
+                '''
+                a = the first symbol of w
+                x = the top stack symbol
+                while stack no empty
+                    if x = a pop the stack and let a be the next symbol of w
+                    else if x is terminal error
+                    else if m[x,a] is not an entry error
+                    else if m[x,a] = x--> y
+                        output the production
+                        pop stack
+                        push y ont the stack with y1 on top
+                    let x be the top stack
+                '''
+                inputs = values + ['.']
+                a = inputs[0]
+                stack = ['S', '.']
+                x = stack[0]
+                error = True
+                character = []
+                while 0 < len(stack) and error:
+                    if x in ['i', 's', 'c', '+', '-']:
+                        terminal = stack.pop(0)
+                        value = inputs.pop(0)
+                        character = character + [value]
+                        #if x == 'i':
+                        #    character = character + characters[value]
+                        #if x == 's':
+                        #    character = character + [value]
+                        # print('match', x)
+                        a = inputs[0]
+                    elif x in M.keys():
+                        for option in M[x]:
+                            if option[0].check(a):
+                                stack.pop(0)
+                                stack = option[1] + stack
+                                continue
+                    else:
+                        error = False
+                    x = stack[0]
+
+                if error:
+                    print("error")
+                else:
+                    characters[name] = character
+                    print("CHARACTER ", name, "ADDED")
                 state = 0
+                token = self.peek()
+            elif state == 2 :
+                values.append(token.val)
                 token = self.peek()
             else: 
                 errors = {0:'ident', 1:'equal', 2:'set', 3:'period'}
                 print('CHARACTERS error: read', token.val, 'expected ', errors[state])
                 state = 0
-        print(token.val)
         print(characters)
         return characters
 
@@ -238,30 +284,85 @@ class Scanner():
         tokens = {}
         token = self.peek()
         state = 0
-        while token.code < 50 and state != -1:
+        parentesisA = DFA("'('")
+        parentesisC = DFA("')'")
+        corchetesA = DFA("'['")
+        corchetesC = DFA("']'")
+        llaveA = DFA("'{'")
+        llaveC = DFA("'}'")
+        llaveC.check('}')
+        orDFA = DFA("/") 
+        orDFA.get_core()
+
+
+
+        M = {'E': [(self.string, ['B', "S'"]), (self.ident, ['B',"S'"]), (self.char, ['B',"S'"]), (llaveA, ['B',"S'"])], "E'": [], 'T':[], "T'":[], 'F':[], 'S': [(self.string, ['s']), (self.ident, ['i']), (self.char, ['c'])]}
+
+        while token.code < 50:
+            token = self.scan()
+            print(token.val)
             if state == 0 and self.ident.check(token.val):
+                print('ident', token.val)
                 name = token.val
                 state += 1
                 token = self.peek()
+                values = []
             elif state == 1 and self.equal.check(token.val):
                 state += 1
                 token = self.peek()
-            elif state == 2 and self.string.check(token.val):
-                value = token.val
-                state += 1
-                token = self.peek()
-            elif state == 3 and self.period.check(token.val):
-                tokens[name] = value[1:-1]
-                print("TOKEN ", name, "ADDED")
-                for i in range(state+1):
-                    self.scan()
-                token = self.peek()
+            elif state == 2 and self.period.check(token.val):
+                '''
+                a = the first symbol of w
+                x = the top stack symbol
+                while stack no empty
+                    if x = a pop the stack and let a be the next symbol of w
+                    else if x is terminal error
+                    else if m[x,a] is not an entry error
+                    else if m[x,a] = x--> y
+                        output the production
+                        pop stack
+                        push y ont the stack with y1 on top
+                    let x be the top stack
+                '''
+                print(values)
+                inputs = values + ['.']
+                a = inputs[0]
+                stack = ['S', '.']
+                x = stack[0]
+                error = True
+                token = []
+                #while 0 < len(stack) and error:
+                #    if x in []:
+                #        terminal = stack.pop(0)
+                #        value = inputs.pop(0)
+                #        character = character + [value]
+                #        a = inputs [0]
+                #    elif x in M.keys():
+                #        for option in M[x]:
+                #            if option[0].check(a):
+                #                stack.pop(0)
+                #                stack = option[1] + stack
+                #                continue
+                #    else:
+                #        error = False
+                #    x = stack[0]
+                #
+                #if error:
+                #    print("error")
+                #else 
+                #    tokens[name] = token
+                #    print("KEYWORD ", name, "ADDED")
+
                 state = 0
+                token = self.peek()
+            elif state == 2:
+                value.append(token.val)
+                token = self.peek()
             else: 
                 self.resetPeek()
                 print('TOKEN error', token.val, token.code, state)
-                state = -1
-        
+                state = 0
+        print(token.val)
         print(tokens)
         return tokens
 
@@ -327,8 +428,8 @@ class Scanner():
 
 
 def main():
-    scanner = Scanner("./tests/test2.txt")
-    scanner.COMPILER()
+    scanner = Scanner("./tests/test3.txt")
+    #scanner.COMPILER()
     #args = scanner.start()
     
 

@@ -1,10 +1,23 @@
 COMPILER Ejemplo
-(.
-/*--------------Scanner Specification----------*/
-.)
+
+CHARACTERS
+
+digit = "0123456789" .
+hexdigit = digit + "ABCDEF" .
 
 KEYWORDS
-if="if".
-while="while".
+
+while = "while".
+do = "do".
+if = "if".
+switch = "switch".
+
+TOKENS
+
+ident = letter{letter|digit} EXCEPTKEYWORDS.
+hexnumber = hexdigit{hexdigit}hexterm EXCEPTKEYWORDS.
+number = digit{digit}.
+signnumber = [sign]digit{digit}.
+whitetoken = whitespace{whitespace}
 
 END Ejemplo.
