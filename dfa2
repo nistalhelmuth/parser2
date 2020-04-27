@@ -3,7 +3,7 @@ digraph finite_state_machine {
 	node [shape=doublecircle]
 	B
 	node [shape=circle]
-	A -> B [label="/"]
-	B -> C [label="/"]
-	C -> C [label="/"]
+	A -> B [label=KEYWORDS]
+	B -> C [label=KEYWORDS]
+	C -> C [label=KEYWORDS]
 }

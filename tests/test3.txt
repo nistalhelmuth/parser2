@@ -14,10 +14,9 @@ switch = "switch".
 
 TOKENS
 
-ident = letter{letter|digit} EXCEPTKEYWORDS.
-hexnumber = hexdigit{hexdigit}hexterm EXCEPTKEYWORDS.
-number = digit{digit}.
-signnumber = [sign]digit{digit}.
-whitetoken = whitespace{whitespace}
+test = digit .
+number = digit { digit } EXCEPT KEYWORDS .
+signnumber = [ sign ] digit{ digit } .
+whitetoken = whitespace{ whitespace } .
 
 END Ejemplo.

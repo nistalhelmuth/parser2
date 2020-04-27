@@ -48,7 +48,7 @@ class Buffer():
                     words.append(word[i] + word[i+1])
                     buff = ''
                     i += 1
-                elif not ignore and word[i] in ['=','+','-','.']:
+                elif not ignore and word[i] in ['=','+','-','.','{', '}', '[' ,']']:
                     if len(buff) > 0:
                         words.append(buff)
                     words.append(word[i])
@@ -66,8 +66,9 @@ class Buffer():
             new_line = []
             for i in range(len(line)):
                 new_line = new_line + clean(line[i])
+            print(new_line)
             words = words + new_line
-
+        #input()
         file.close()
         self.currentWord =  Node(words)
         self.nextWord = self.currentWord
@@ -134,14 +135,14 @@ class Scanner():
         self.buffer = Buffer(file)
 
         #any_atr = set(string.printable)
-        #self.any_atr = DFA('|'.join(list(any_atr)))
-        self.hexdigit = DFA('|'.join(list(set('0123456789').union(set('ABCDEF')))))
-        #self.noApostrophe  = DFA('|'.join(list(any_atr.difference(set("'")))))
-        self.letter = DFA('a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z')
-        self.digit = DFA('0|1|2|3|4|5|6|7|8|9')
-        #self.noQuote  = DFA('|'.join(list(any_atr.difference(set('"')))))
+        #self.any_atr = DFA('!'.join(list(any_atr)))
+        self.hexdigit = DFA('!'.join(list(set('0123456789').union(set('ABCDEF')))))
+        #self.noApostrophe  = DFA('!'.join(list(any_atr.difference(set("'")))))
+        self.letter = DFA('a!b!c!d!e!f!g!h!i!j!k!l!m!n!o!p!q!r!s!t!u!v!w!x!y!z!A!B!C!D!E!F!G!H!I!J!K!L!M!N!O!P!Q!R!S!T!U!V!W!X!Y!Z')
+        self.digit = DFA('0!1!2!3!4!5!6!7!8!9')
+        #self.noQuote  = DFA('!'.join(list(any_atr.difference(set('"')))))
 
-        self.ident = DFA('letter {letter|digit}', {'letter': self.letter, 'digit': self.digit})
+        self.ident = DFA('letter {letter!digit}', {'letter': self.letter, 'digit': self.digit})
         self.string =  DFA('" {noQuote} "')
         self.number =  DFA('digit {digit}', {'digit': self.digit})
         self.char =  DFA("' noApostrophe '")
@@ -154,20 +155,24 @@ class Scanner():
         '''
             ["CHARACTERS" {SetDecl}]
             SetDecl = ident '=' Set.
-            Set = BasicSet { ('+'|'-') BasicSet }.
-            BasicSet = string | ident | Char [".." Char].
-            Char = char | "CHR" '(' number ')'.
+            Set = BasicSet { ('+'!'-') BasicSet }.
+            BasicSet = string ! ident ! Char [".." Char].
+            Char = char ! "CHR" '(' number ')'.
         '''
         characters = {}
         token = self.peek()
         state = 0
 
-        char = DFA("char|CHR'('number')'")
+        char = DFA("char!CHR'('number')'")
         char = self.char
-        basicset = DFA('string|ident', {'string': self.string, 'ident': self.ident, 'char':self.char})
-        mySet = DFA('BasicSet {(+|-) BasicSet}',{'BasicSet': basicset})
+        basicset = DFA('string!ident', {'string': self.string, 'ident': self.ident, 'char':self.char})
+        mySet = DFA('BasicSet {(+!-) BasicSet}',{'BasicSet': basicset})
 
-        M = {'S': [(self.string, ['B', "S'"]), (self.ident, ['B',"S'"]), (char, ['B',"S'"])], 'B': [(self.string, ['s']), (self.ident, ['i']), (char, ['c'])], "S'": [(self.plus, ['+', 'B']), (self.minus, ['-', 'B']), (self.period, [])]}
+        M = {
+            'S': [(self.string, ['B', "S'"]), (self.ident, ['B',"S'"]), (char, ['B',"S'"])], 
+            'B': [(self.string, ['s']), (self.ident, ['i']), (char, ['c'])], 
+            "S'": [(self.plus, ['+', 'B']), (self.minus, ['-', 'B']), (self.period, [])]
+        }
         while token.code < 50:
             token = self.scan()
             
@@ -215,7 +220,7 @@ class Scanner():
                             if option[0].check(a):
                                 stack.pop(0)
                                 stack = option[1] + stack
-                                continue
+                                break
                     else:
                         error = False
                     x = stack[0]
@@ -276,39 +281,49 @@ class Scanner():
         '''
             ["TOKENS" {TokenDecl}]
             TokenDecl = ident ['=' TokenExpr ] ["EXCEPT KEYWORDS"] '.'.
-            TokenExpr = TokenTerm {'|' TokenTerm }.
+            TokenExpr = TokenTerm {| TokenTerm }.
             TokenTerm = TokenFactor {TokenFactor}
-            TokenFactor = Symbol | '(' TokenExpr ')' | '[' TokenExpr ']' | '{' TokenExpr '}'.
-            Symbol = ident | string | char
+            TokenFactor = Symbol ! ( TokenExpr ) ! [ TokenExpr ] ! { TokenExpr }.
+            Symbol = ident ! string ! char
         '''
         tokens = {}
         token = self.peek()
         state = 0
-        parentesisA = DFA("'('")
-        parentesisC = DFA("')'")
-        corchetesA = DFA("'['")
-        corchetesC = DFA("']'")
-        llaveA = DFA("'{'")
-        llaveC = DFA("'}'")
-        llaveC.check('}')
-        orDFA = DFA("/") 
-        orDFA.get_core()
+        parentesisA = DFA("(")
+        parentesisC = DFA(")")
+        corchetesA = DFA("[")
+        corchetesC = DFA("]")
+        llaveA = DFA("{")
+        llaveC = DFA("}")
+        orDFA = DFA("|") 
+        excep = DFA("EXCEPT")
+        keys = DFA("KEYWORDS")
 
-
-
-        M = {'E': [(self.string, ['B', "S'"]), (self.ident, ['B',"S'"]), (self.char, ['B',"S'"]), (llaveA, ['B',"S'"])], "E'": [], 'T':[], "T'":[], 'F':[], 'S': [(self.string, ['s']), (self.ident, ['i']), (self.char, ['c'])]}
+        M = {
+            'E': [(self.string, ['T',"E'"]), (self.ident, ['T',"E'"]), (self.char, ['T',"E'"]), (llaveA, ['T',"E'"]), (parentesisA, ['T',"E'"]), (corchetesA, ['T',"E'"]), (parentesisC, ['T',"E'"]), (corchetesC, ['T',"E'"]), (llaveC, ['T',"E'"])], 
+            "E'": [(orDFA, ['|','T',"E'"]), (parentesisC, []), (corchetesC, []), (llaveC, []), (self.period, [])], 
+            'T': [(self.string, ['F', "T'"]), (self.ident, ['F', "T'"]), (self.char, ['F', "T'"]), (llaveA, ['F', "T'"]), (parentesisA, ['F', "T'"]), (corchetesA, ['F', "T'"])], 
+            "T'": [(self.string, ['F', "T'"]), (self.ident, ['F', "T'"]), (self.char, ['F', "T'"]), (llaveA, ['F', "T'"]), (parentesisA, ['F', "T'"]), (corchetesA, ['F', "T'"]), (parentesisC, []), (corchetesC, []), (llaveC, []), (self.period, [])], 
+            'F': [(self.string, ['S']), (self.ident, ['S']), (self.char, ['S']), (parentesisA, ['(', 'E', ')']), (corchetesA, ['[', 'E', ']']), (llaveA, ['{', 'E', '}'])],
+            'S': [(self.string, ['s']), (self.ident, ['i']), (self.char, ['c'])],
+        }
 
         while token.code < 50:
             token = self.scan()
-            print(token.val)
             if state == 0 and self.ident.check(token.val):
-                print('ident', token.val)
                 name = token.val
                 state += 1
                 token = self.peek()
                 values = []
+                flag = False
             elif state == 1 and self.equal.check(token.val):
                 state += 1
+                token = self.peek()
+            elif state == 2 and excep.check([token.val]):
+                token = self.peek()
+                if keys.check([token.val]):
+                    self.scan()
+                    flag = True
                 token = self.peek()
             elif state == 2 and self.period.check(token.val):
                 '''
@@ -324,45 +339,43 @@ class Scanner():
                         push y ont the stack with y1 on top
                     let x be the top stack
                 '''
-                print(values)
                 inputs = values + ['.']
                 a = inputs[0]
-                stack = ['S', '.']
+                stack = ['E', '.']
                 x = stack[0]
                 error = True
                 token = []
-                #while 0 < len(stack) and error:
-                #    if x in []:
-                #        terminal = stack.pop(0)
-                #        value = inputs.pop(0)
-                #        character = character + [value]
-                #        a = inputs [0]
-                #    elif x in M.keys():
-                #        for option in M[x]:
-                #            if option[0].check(a):
-                #                stack.pop(0)
-                #                stack = option[1] + stack
-                #                continue
-                #    else:
-                #        error = False
-                #    x = stack[0]
-                #
-                #if error:
-                #    print("error")
-                #else 
-                #    tokens[name] = token
-                #    print("KEYWORD ", name, "ADDED")
+                while 0 < len(stack) and error:
+                    if x in ['i', 's', 'c', '|', '(', ')', '[', ']', '{', '}']:
+                        terminal = stack.pop(0)
+                        value = inputs.pop(0)
+                        token = token + [value]
+                        a = inputs [0]
+                    elif x in M.keys():
+                        for option in M[x]:
+                            if option[0].check(a):
+                                stack.pop(0)
+                                stack = option[1] + stack
+                                break
+                    else:
+                        error = False
+                    x = stack[0]
+                
+                if error:
+                    print("error")
+                else:
+                    tokens[name] = (flag, token)
+                    print("KEYWORD ", name, "ADDED")
 
                 state = 0
                 token = self.peek()
             elif state == 2:
-                value.append(token.val)
+                values.append(token.val)
                 token = self.peek()
             else: 
                 self.resetPeek()
                 print('TOKEN error', token.val, token.code, state)
                 state = 0
-        print(token.val)
         print(tokens)
         return tokens
 
@@ -429,7 +442,7 @@ class Scanner():
 
 def main():
     scanner = Scanner("./tests/test3.txt")
-    #scanner.COMPILER()
+    scanner.COMPILER()
     #args = scanner.start()
     
 

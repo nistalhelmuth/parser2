@@ -1,4 +1,4 @@
-precedence = {'*':3, '?':3, '&':3, '_':2, '|':1, ' ':2} 
+precedence = {'*':3, '?':3, '&':3, '_':2, '!':1, ' ':2} 
 
 def conversionToPostfix(expresion):
     def pop(top, array):
@@ -25,10 +25,10 @@ def conversionToPostfix(expresion):
         if i < len(exp)-2 and exp[i] == "'" and exp[i+2] == "'":
             output.append(exp[i+1])
             i += 3
-        elif exp[i].isalnum() or exp[i] in ['#', '.', '+', '-', ',', '=', '"', "'"]:
+        elif exp[i].isalnum() or exp[i] in ['#', '.', '+', '-', ',', '=', '"', "'", '|']:
             count = 0
             buff = exp[i]
-            while i+count+1 < len(exp) and ( exp[i+count+1].isalnum() or exp[i+count+1] in ['#', '.', '+', '-', ',', '=']):
+            while i+count+1 < len(exp) and ( exp[i+count+1].isalnum() or exp[i+count+1] in ['#', '.', '+', '-', ',', '=', '|']):
                 count += 1
                 buff = buff + exp[i+count]
             output.append(buff) 

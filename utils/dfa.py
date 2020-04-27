@@ -18,7 +18,7 @@ class Node():
         if self.label == '*':
             self.left.setPositions(positions)
             return positions
-        elif self.label == '|' or self.label == '_':
+        elif self.label == '!' or self.label == '_':
             new_positions = self.left.setPositions(positions)
             self.right.setPositions(new_positions)
             return positions
@@ -32,7 +32,7 @@ class Node():
         return positions
 
     def setNullable(self):
-        if self.label == '|':
+        if self.label == '!':
             self.nullable = self.left.setNullable() or self.right.setNullable()
         elif self.label == '_':
             A = self.left.setNullable()
@@ -49,7 +49,7 @@ class Node():
         return self.nullable
     
     def setFirstPos(self):
-        if self.label == '|':
+        if self.label == '!':
             A = self.left.setFirstPos()
             B = self.right.setFirstPos()
             self.firstpos = A.union(B)
@@ -68,7 +68,7 @@ class Node():
         return self.firstpos
 
     def setLastPos(self):
-        if self.label == '|':
+        if self.label == '!':
             A = self.left.setLastPos()
             B = self.right.setLastPos()
             self.lastpos = A.union(B)
@@ -92,7 +92,7 @@ class Node():
                 table[(dic[i], i)] = table[(dic[i], i)].union(self.right.firstpos)
             table = self.left.setFollowPos(table, dic)
             table = self.right.setFollowPos(table, dic)
-        elif self.label == '|':
+        elif self.label == '!':
             table = self.left.setFollowPos(table, dic)
             table = self.right.setFollowPos(table, dic)
         elif self.label == '*':
@@ -148,14 +148,17 @@ class DFA:
 
     def __init__(self, exp, reference={}):
         # Genera el arbol
-        self.expre = conversionToPostfix(exp)
+        if len(exp) == 1:
+            self.expre = exp
+        else:
+            self.expre = conversionToPostfix(exp)
         stack = []
         self.language = []
         for ch in self.expre:
             if ch == '*':
                 node_A = stack.pop()
                 stack.append(Node(left=node_A,label='*'))
-            elif ch == '_' or ch =='|':
+            elif ch == '_' or ch =='!':
                 node_A = stack.pop()
                 node_B = stack.pop()
                 stack.append(Node(left=node_B, label=ch, right=node_A))
@@ -166,7 +169,7 @@ class DFA:
             elif ch == '?': #r|ɛ
                 node_A = stack.pop()
                 node_B = Node(label='#')
-                stack.append(Node(left=node_A, label='|', right=node_B))
+                stack.append(Node(left=node_A, label='!', right=node_B))
             else:
                 if ch in reference.keys():
                     stack.append(reference[ch].core)
@@ -178,7 +181,7 @@ class DFA:
 
         # Encuentra el lenguaje
         for letter in self.expre:
-            if letter not in self.language and letter not in '*|_#?&' and letter not in reference.keys():
+            if letter not in self.language and letter not in '*!_#?&' and letter not in reference.keys():
                 self.language.append(letter)
         
         node_A = self.core
