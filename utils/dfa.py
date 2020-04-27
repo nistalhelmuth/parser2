@@ -104,7 +104,7 @@ class Node():
     def evaluate(self, followtable, language):
         transitions = {}
         Dstates = [self.firstpos]
-        letters = 'ABCDEFGHI'
+        letters = 'ABCDEFGHIJKLMOPQR'
         count = 0
         while count < len(Dstates):
             S = Dstates[count]
@@ -222,12 +222,13 @@ class DFA:
         def new_move(state, transitions, value):
             any_atr = set(strDefinition.printable)
             table = {'noQuote': set(strDefinition.printable).difference(set('"')), 'noApostrophe': set(strDefinition.printable).difference(set("'"))}
-            if value in transitions[state].keys():
-                return transitions[state][value]
 
             for key in transitions[state].keys():
                 if key in table.keys() and value in table[key]:
                     return transitions[state][key]
+            if value in transitions[state].keys():
+                return transitions[state][value]
+            
             return -1
 
         

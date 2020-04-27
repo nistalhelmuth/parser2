@@ -66,9 +66,9 @@ class Buffer():
             new_line = []
             for i in range(len(line)):
                 new_line = new_line + clean(line[i])
-            #print(new_line)
+            print(new_line)
             words = words + new_line
-        #input()
+        input()
         file.close()
         self.currentWord =  Node(words)
         self.nextWord = self.currentWord

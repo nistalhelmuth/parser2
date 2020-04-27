@@ -1,9 +1,9 @@
-COMPILER Ejemplo
+COMPILER Aritmetica    
 
-CHARACTERS
+CHARACTERS 
 
+letter = "abcdefghijklmnopqrstuvwxyz" . 
 digit = "0123456789" .
-hexdigit = digit + "ABCDEF" .
 
 KEYWORDS
 
@@ -14,9 +14,7 @@ switch = "switch".
 
 TOKENS
 
-test = digit .
-number = digit { digit } EXCEPT KEYWORDS .
-signnumber = [ sign ] digit{ digit } .
-whitetoken = whitespace{ whitespace } .
+number = letter.
+digit = digit.
 
-END Ejemplo.
+END Aritmetica

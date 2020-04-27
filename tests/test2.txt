@@ -1,15 +1,16 @@
 COMPILER Ejemplo
 
 CHARACTERS
-letter = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" .
+upletter = 'A' .. 'Z'.
+downletter = 'a' .. 'z'.
+letter = "abcdefghijklmnopqrstuvwxyz" + upletter + downletter. 
 digit = "0123456789" .
+hexdigit = digit + "ABCDEF".
 
 KEYWORDS
 
 while = "while".
 do = "do".
-if = "if".
-switch = "switch".
 
 TOKENS
 

@@ -124,5 +124,3 @@ def conversionToPostfix(expresion):
         output.append(c) 
     return output
 
-
-print(conversionToPostfix("CHR '(' digit ')'"))
