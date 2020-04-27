@@ -68,7 +68,7 @@ class Buffer():
                 new_line = new_line + clean(line[i])
             print(new_line)
             words = words + new_line
-        #input()
+        input()
         file.close()
         self.currentWord =  Node(words)
         self.nextWord = self.currentWord
@@ -157,15 +157,14 @@ class Scanner():
             SetDecl = ident '=' Set.
             Set = BasicSet { ('+'!'-') BasicSet }.
             BasicSet = string ! ident ! Char [".." Char].
-            Char = char ! "CHR" '(' number ')'.
+            Char = char!"CHR" '(' number ')'.
         '''
         characters = {}
         token = self.peek()
         state = 0
 
-        char = DFA("char!CHR'('number')'")
-        char = self.char
-        basicset = DFA('string!ident', {'string': self.string, 'ident': self.ident, 'char':self.char})
+        char = DFA("char!(CHR '(' digit ')')", {'digit': self.digit})
+        basicset = DFA('string!ident', {'string': self.string, 'ident': self.ident, 'char':char})
         mySet = DFA('BasicSet {(+!-) BasicSet}',{'BasicSet': basicset})
 
         M = {
@@ -438,11 +437,15 @@ class Scanner():
     def resetPeek(self):
         self.buffer.resetPeek()
     
+    def test(self, file):
+        print('')
+    
 
 
 def main():
-    scanner = Scanner("./tests/test3.txt")
+    scanner = Scanner("./tests/Aritmetica.ATG")
     scanner.COMPILER()
+    #scanner.test('./inputs/input1.txt')
     #args = scanner.start()
     
 

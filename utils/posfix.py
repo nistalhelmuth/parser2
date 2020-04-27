@@ -24,7 +24,7 @@ def conversionToPostfix(expresion):
     while i < len(exp):
         if i < len(exp)-2 and exp[i] == "'" and exp[i+2] == "'":
             output.append(exp[i+1])
-            i += 3
+            i += 2
         elif exp[i].isalnum() or exp[i] in ['#', '.', '+', '-', ',', '=', '"', "'", '|']:
             count = 0
             buff = exp[i]
@@ -123,3 +123,6 @@ def conversionToPostfix(expresion):
             c = "$"
         output.append(c) 
     return output
+
+
+print(conversionToPostfix("CHR '(' digit ')'"))
