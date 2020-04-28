@@ -2,6 +2,11 @@ import string
 from utils.dfa import DFA
 import string as strDefinition
 
+def letterList (start, end):
+    a = ' ' + string.ascii_uppercase + string.ascii_lowercase
+    direction = 1 if start < end else -1
+    return a[a.index(start):a.index(end) + direction:direction]
+
 class Token():
     def __init__(self, code, val, pos=None, charPos=None, line=None, col=None):
         self.code = code                   # token code (EOF has the code 0)
@@ -49,7 +54,7 @@ class Buffer():
                     words.append(word[i] + word[i+1])
                     buff = ''
                     i += 1
-                elif not ignore and word[i] in ['=','+','-','.','{', '}', '[' ,']']:
+                elif not ignore and word[i] in ['=','+','-','.','{', '}', '[' ,']', '|']:
                     if len(buff) > 0:
                         words.append(buff)
                     words.append(word[i])
@@ -147,9 +152,9 @@ class Scanner():
         self.digit = DFA('0!1!2!3!4!5!6!7!8!9')
         #self.noQuote  = DFA('!'.join(list(any_atr.difference(set('"')))))
 
-        self.ident = DFA('letter {letter!digit}', {'letter': self.letter, 'digit': self.digit})
-        self.string =  DFA('" {noQuote} "')
-        self.number =  DFA('digit {digit}', {'digit': self.digit})
+        self.ident = DFA('letter{letter!digit}', {'letter': self.letter, 'digit': self.digit})
+        self.string =  DFA('"{noQuote}"')
+        self.number =  DFA('digit{digit}', {'digit': self.digit})
         self.char =  DFA("' noApostrophe '")
         self.equal =  DFA("=")
         self.period =  DFA(".")
@@ -177,16 +182,16 @@ class Scanner():
         number = DFA("number ')'", {'number': self.number})
         Char = DFA("char!Char", {'char': self.char, 'Char': DFA(['CHR('])})
         
-        basicset = DFA('string!ident!(Char [".." Char])', {'string': self.string, 'ident': self.ident, 'Char':Char})
-        mySet = DFA('BasicSet {(+!-) BasicSet}',{'BasicSet': basicset})
+        basicset = DFA('string!ident!Char[".." Char]', {'string': self.string, 'ident': self.ident, 'Char':Char})
+        mySet = DFA('BasicSet{Signs BasicSet}',{'Signs': DFA('+!-'), 'BasicSet': basicset})
 
         M = {
             'S': [(self.string, ['B', "S'"]), (self.ident, ['B',"S'"]), (Char, ['B', "S'"])], 
             'B': [(self.string, ['s']), (self.ident, ['i']), (Char, ['C', "B'"])], 
-            "B'": [(periods, ['..', 'C']), (self.period, [])],
+            "B'": [(periods, ['..', 'C']), (self.period, []), (self.plus, []), (self.minus, [])],
             'C': [(self.char, ['c']), (start, ['CHR(', 'N'])],
             'N': [(number, ['n'])],
-            "S'": [(self.plus, ['+', 'B']), (self.minus, ['-', 'B']), (self.period, []), (periods, []) ]
+            "S'": [(self.plus, ['+', 'B', "S'"]), (self.minus, ['-', 'B', "S'"]), (self.period, []), (periods, []) ]
         }
         while token.code < 50:
             token = self.scan()
@@ -218,17 +223,34 @@ class Scanner():
                 stack = ['S', '.']
                 x = stack[0]
                 error = True
-                character = []
+                totalCharacters = set()
+                #character = []
+                operator = ''
                 while 0 < len(stack) and error:
                     if x in ['i', 's', 'c', '+', '-', '..', 'n', 'CHAR(']:
                         terminal = stack.pop(0)
                         value = inputs.pop(0)
-                        character = character + [value]
-                        #if x == 'i':
-                        #    character = character + characters[value]
-                        #if x == 's':
-                        #    character = character + [value]
-                        # print('match', x)
+                        #character = character + [value]
+                        if x == 'i' and value in characters.keys():
+                            character = characters[value]
+                        elif x == 's':
+                            character = set(value[1:-1])
+                        elif x == 'c':
+                            character = set(value[1:-1])
+                        
+                        if x in ['+','-','..']:
+                            operator = x
+                        elif operator == '':
+                            totalCharacters = character
+                        elif operator == '+':
+                            operator = ''
+                            totalCharacters = totalCharacters.union(character)
+                        elif operator == '-':
+                            operator = ''
+                            totalCharacters = totalCharacters.difference(character)
+                        elif operator == '..':
+                            operator = ''
+                            totalCharacters = set(letterList(list(totalCharacters)[0], list(character)[0]))
                         a = inputs[0]
                     elif x in M.keys():
                         for option in M[x]:
@@ -243,7 +265,7 @@ class Scanner():
                 if error:
                     print("error")
                 else:
-                    characters[name] = character
+                    characters[name] = totalCharacters
                     print("CHARACTER ", name, "ADDED")
                 state = 0
                 token = self.peek()
@@ -360,10 +382,13 @@ class Scanner():
                 x = stack[0]
                 error = True
                 token = []
+                dependencies = []
                 while 0 < len(stack) and error:
                     if x in ['i', 's', 'c', '|', '(', ')', '[', ']', '{', '}']:
                         terminal = stack.pop(0)
                         value = inputs.pop(0)
+                        if x == 'i' and value not in dependencies:
+                            dependencies = dependencies + [value]
                         token = token + [value]
                         a = inputs [0]
                     elif x in M.keys():
@@ -379,7 +404,11 @@ class Scanner():
                 if error:
                     print("error")
                 else:
-                    tokens[name] = (flag, token)
+                    if flag:
+                        tokens[name] = ("true", token, dependencies)
+                    else:
+                        tokens[name] = ("false", token, dependencies)
+
                     print("KEYWORD ", name, "ADDED")
 
                 state = 0
@@ -461,28 +490,69 @@ class Scanner():
         for text in file.readlines():
             line = text.split()
         file.close()
-        test = 'abcdef1234567'
+        test = 'abcdef1234567asddasd'
         tokens = {
             'letter': DFA('a!b!c'),
             'digit': DFA('0!1!2!3'),
         }
         i = 0
+        buff = ''
         while i < len(test):
+            buff = buff + test[i]
             for ident in tokens.keys():
-                if tokens[ident].check(test[i]):
+                if tokens[ident].check(buff):
                     print('<',ident,',',test[i],'>')
+                    buff = ''
             i += 1
-    
+
+
     def translate(self, target):
-        f = open(target, "a")
-        f.write("import java.io.*;")
+        def characters(f):
+            f.write("#CHARACTERS\n")
+            for key in self.characters.keys():
+                values = ''
+                for value in self.characters[key]:
+                    values = values + value
+                if values != '':
+                    f.write("%s = DFA('%s')\n" % (key ,'!'.join(list(values))))
+            f.write("\n")
+        
+        def keywords(f):
+            f.write("#KEYWORDS\n")
+            f.write("keywords = {}\n")
+            for key in self.keywords.keys():
+                f.write('keywords["%s"] = "%s"\n' % (key, self.keywords[key]))
+            f.write("\n")
+        
+        def tokens(f):
+            f.write("#TOKENS\n")
+            for key in self.tokens.keys():
+                dependencies = ''
+                for char in self.tokens[key][2]:
+                    if dependencies == '':
+                        dependencies = "'"+char+"': "+char
+                    else:
+                        dependencies = dependencies+", '"+char+"': "+char
+                f.write("%s = DFA('%s', {%s})\n" % (key, ''.join(self.tokens[key][1]), dependencies))
+            f.write("\n")
+
+        f = open('./%s.py' % (target), "w")
+        f.write("from utils.dfa import DFA\n")
+        f.write("\n")
+
+        characters(f)
+
+        keywords(f)
+
+        tokens(f)
+
         f.close()
 
 
 def main():
-    #scanner = Scanner("./tests/test3.txt")
-    #scanner.COMPILER()
-    scanner.translate('target/target.java')
+    scanner = Scanner("./tests/test3.txt")
+    scanner.COMPILER()
+    scanner.translate('target')
     #scanner.test('./inputs/input1.txt')
     #args = scanner.start()
     

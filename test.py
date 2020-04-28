@@ -54,7 +54,7 @@ class Buffer():
                     words.append(word[i] + word[i+1])
                     buff = ''
                     i += 1
-                elif not ignore and word[i] in ['=','+','-','.','{', '}', '[' ,']']:
+                elif not ignore and word[i] in ['=','+','-','.','{', '}', '[' ,']', '|']:
                     if len(buff) > 0:
                         words.append(buff)
                     words.append(word[i])
@@ -77,6 +77,7 @@ class Buffer():
             new_line = []
             for i in range(len(line)):
                 new_line = new_line + clean(line[i])
+            print(new_line)
             words = words + new_line
         file.close()
         self.currentWord =  Node(words)
@@ -151,9 +152,9 @@ class Scanner():
         self.digit = DFA('0!1!2!3!4!5!6!7!8!9')
         #self.noQuote  = DFA('!'.join(list(any_atr.difference(set('"')))))
 
-        self.ident = DFA('letter {letter!digit}', {'letter': self.letter, 'digit': self.digit})
-        self.string =  DFA('" {noQuote} "')
-        self.number =  DFA('digit {digit}', {'digit': self.digit})
+        self.ident = DFA('letter{letter!digit}', {'letter': self.letter, 'digit': self.digit})
+        self.string =  DFA('"{noQuote}"')
+        self.number =  DFA('digit{digit}', {'digit': self.digit})
         self.char =  DFA("' noApostrophe '")
         self.equal =  DFA("=")
         self.period =  DFA(".")
@@ -181,13 +182,13 @@ class Scanner():
         number = DFA("number ')'", {'number': self.number})
         Char = DFA("char!Char", {'char': self.char, 'Char': DFA(['CHR('])})
         
-        basicset = DFA('string!ident!(Char [".." Char])', {'string': self.string, 'ident': self.ident, 'Char':Char})
-        mySet = DFA('BasicSet {(+!-) BasicSet}',{'BasicSet': basicset})
+        basicset = DFA('string!ident!Char[".." Char]', {'string': self.string, 'ident': self.ident, 'Char':Char})
+        mySet = DFA('BasicSet{Signs BasicSet}',{'Signs': DFA('+!-'), 'BasicSet': basicset})
 
         M = {
             'S': [(self.string, ['B', "S'"]), (self.ident, ['B',"S'"]), (Char, ['B', "S'"])], 
             'B': [(self.string, ['s']), (self.ident, ['i']), (Char, ['C', "B'"])], 
-            "B'": [(periods, ['..', 'C']), (self.period, [])],
+            "B'": [(periods, ['..', 'C']), (self.period, []), (self.plus, []), (self.minus, [])],
             'C': [(self.char, ['c']), (start, ['CHR(', 'N'])],
             'N': [(number, ['n'])],
             "S'": [(self.plus, ['+', 'B', "S'"]), (self.minus, ['-', 'B', "S'"]), (self.period, []), (periods, []) ]
@@ -235,7 +236,7 @@ class Scanner():
                         elif x == 's':
                             character = set(value[1:-1])
                         elif x == 'c':
-                            character = value[1:-1]
+                            character = set(value[1:-1])
                         
                         if x in ['+','-','..']:
                             operator = x
@@ -249,7 +250,7 @@ class Scanner():
                             totalCharacters = totalCharacters.difference(character)
                         elif operator == '..':
                             operator = ''
-                            totalCharacters = set(letterList(totalCharacters, character))
+                            totalCharacters = set(letterList(list(totalCharacters)[0], list(character)[0]))
                         a = inputs[0]
                     elif x in M.keys():
                         for option in M[x]:
@@ -381,10 +382,13 @@ class Scanner():
                 x = stack[0]
                 error = True
                 token = []
+                dependencies = []
                 while 0 < len(stack) and error:
                     if x in ['i', 's', 'c', '|', '(', ')', '[', ']', '{', '}']:
                         terminal = stack.pop(0)
                         value = inputs.pop(0)
+                        if x == 'i' and value not in dependencies:
+                            dependencies = dependencies + [value]
                         token = token + [value]
                         a = inputs [0]
                     elif x in M.keys():
@@ -401,9 +405,9 @@ class Scanner():
                     print("error")
                 else:
                     if flag:
-                        tokens[name] = ("true", token)
+                        tokens[name] = ("true", token, dependencies)
                     else:
-                        tokens[name] = ("false", token)
+                        tokens[name] = ("false", token, dependencies)
 
                     print("KEYWORD ", name, "ADDED")
 
@@ -504,50 +508,51 @@ class Scanner():
 
     def translate(self, target):
         def characters(f):
-            f.write("\n")
+            f.write("#CHARACTERS\n")
             for key in self.characters.keys():
-                f.write("class %s {\n" % (key))
                 values = ''
                 for value in self.characters[key]:
                     values = values + value
-                f.write('String set = "%s";\n' % (''.join(list(values))))
-                f.write("}\n")
-                f.write("\n")
+                if values != '':
+                    f.write("%s = DFA('%s')\n" % (key ,'!'.join(list(values))))
+            f.write("\n")
         
         def keywords(f):
-            f.write("\n")
-            f.write("Dictionary keywords = new Hashtable();\n")
+            f.write("#KEYWORDS\n")
+            f.write("keywords = {}\n")
             for key in self.keywords.keys():
-                f.write('keywords.put("%s", "%s");\n' % (key, self.keywords[key]))
+                f.write('keywords["%s"] = "%s"\n' % (key, self.keywords[key]))
             f.write("\n")
         
         def tokens(f):
-            f.write("\n")
+            f.write("#TOKENS\n")
             for key in self.tokens.keys():
-                f.write('%s = new DFA(%s, "%s");\n' % (key, self.tokens[key][0], ''.join(self.tokens[key][1])))
+                dependencies = ''
+                for char in self.tokens[key][2]:
+                    if dependencies == '':
+                        dependencies = "'"+char+"': "+char
+                    else:
+                        dependencies = dependencies+", '"+char+"': "+char
+                f.write("%s = DFA('%s', {%s})\n" % (key, ''.join(self.tokens[key][1]), dependencies))
             f.write("\n")
 
-        f = open('./target/%s.java' % (target), "w")
-        f.write("import java.io.*;\n")
-        f.write("import java.util.*;\n")
+        f = open('./%s.py' % (target), "w")
+        f.write("from utils.dfa import DFA\n")
+        f.write("\n")
+
         characters(f)
-        f.write("public class %s\n" % (target))
-        f.write("{\n")
-        f.write("public static void main(String[] args)\n")
-        f.write("{\n")
+
         keywords(f)
 
         tokens(f)
-        f.write("System.out.println(%s);\n" % ('"Hello World"'))
-        f.write("}\n")
-        f.write("}\n")
+
         f.close()
 
 
 def main():
     scanner = Scanner("./tests/test3.txt")
     scanner.COMPILER()
-    scanner.translate('Target')
+    scanner.translate('target')
     #scanner.test('./inputs/input1.txt')
     #args = scanner.start()
     

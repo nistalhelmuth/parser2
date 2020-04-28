@@ -4,9 +4,10 @@ CHARACTERS
 
 upletter = 'A' .. 'Z' .
 downletter = 'a' .. 'z' .
-letter = "abcdefghijklmnopqrstuvwxyz" - upletter - downletter. 
+letter = "abcdefghijklmnopqrstuvwxyz" + upletter - downletter. 
 digit = "0123456789" .
 hexdigit = digit + "ABCDEF".
+sign ='+'+'-'.
 
 KEYWORDS
 
@@ -17,9 +18,9 @@ switch = "switch".
 
 TOKENS
 
-digit = digit.
-ident = letter {letter | digit} EXCEPT KEYWORDS .
-number = digit {digit} .
-signnumber = [sign] digit {digit} .
+digit = digit .
+ident = letter{letter|digit} EXCEPT KEYWORDS .
+number = digit{digit} .
+signnumber = [sign]digit{digit} .
 
 END Aritmetica

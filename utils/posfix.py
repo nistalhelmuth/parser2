@@ -19,6 +19,7 @@ def conversionToPostfix(expresion):
     top = -1
     array = []
     output = []
+    exp = expresion
     exp = '_'.join(expresion.split())
     i = 0
     while i < len(exp):
@@ -46,9 +47,13 @@ def conversionToPostfix(expresion):
             
         elif exp[i] in ['(' ,'[' ,'{']: 
             top += 1
+            if exp[:i] != '':
+                top += 1
+                array.append('_')
             array.append(exp[i])
 
         elif exp[i] in [')' ,']' ,'}'] and len(array) == 0: 
+            print('asdf')
             top += 1
             array.append(exp[i])
         elif exp[i] == ')': 
@@ -67,7 +72,9 @@ def conversionToPostfix(expresion):
             elif not top == -1:
                     top -= 1
                     array.pop()
-        
+            if exp[i+1:] != '':
+                top += 1
+                array.append('_')
         elif exp[i] == ']': 
             while((not top == -1) and array[-1]  != '['): 
 
@@ -85,7 +92,9 @@ def conversionToPostfix(expresion):
             elif not top == -1:
                     top -= 1
                     array.pop()
-        
+            if exp[i+1:] != '':
+                top += 1
+                array.append('_')
         elif exp[i] == '}': 
             while((not top == -1) and array[-1]  != '{'): 
 
@@ -103,6 +112,9 @@ def conversionToPostfix(expresion):
             elif not top == -1:
                     top -= 1
                     array.pop()
+            if exp[i+1:] != '':
+                top += 1
+                array.append('_')
         
         else: 
             while(not top == -1 and notGreater(exp[i], array) and exp[i] != '*'): 
@@ -115,6 +127,8 @@ def conversionToPostfix(expresion):
             top += 1
             array.append(exp[i])
         i += 1
+    #print(array)
+    #print(output)
     while not top == -1: 
         if not top == -1:
             top -= 1
@@ -124,3 +138,5 @@ def conversionToPostfix(expresion):
         output.append(c) 
     return output
 
+
+#print(conversionToPostfix('test{letter}digit'))

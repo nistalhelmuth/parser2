@@ -1,11 +1,7 @@
 COMPILER Ejemplo
 
 CHARACTERS
-upletter = 'A' .. 'Z'.
-downletter = 'a' .. 'z'.
-letter = "abcdefghijklmnopqrstuvwxyz" + upletter + downletter. 
-digit = "0123456789" .
-hexdigit = digit + "ABCDEF".
+sign ='+'+'-'.
 
 KEYWORDS
 
