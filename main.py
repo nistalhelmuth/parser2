@@ -1,5 +1,6 @@
 import string
 from utils.dfa import DFA
+import string as strDefinition
 
 class Token():
     def __init__(self, code, val, pos=None, charPos=None, line=None, col=None):
@@ -53,10 +54,15 @@ class Buffer():
                         words.append(buff)
                     words.append(word[i])
                     buff = ''
+                elif word[i:i+4] == 'CHR(':
+                    words.append(word[i:i+4])
+                    i += 3
                 else:
                     buff = buff + word[i]
                     
                 i += 1
+            if len(buff) > 0:
+                words.append(buff)
             return words
 
         file = open(stream, 'r')
@@ -68,7 +74,6 @@ class Buffer():
                 new_line = new_line + clean(line[i])
             print(new_line)
             words = words + new_line
-        input()
         file.close()
         self.currentWord =  Node(words)
         self.nextWord = self.currentWord
@@ -150,8 +155,11 @@ class Scanner():
         self.period =  DFA(".")
         self.plus =  DFA("+")
         self.minus =  DFA("-")
-        test = DFA('CHR(digit)')
-        test.get_core()
+        #start = DFA('C H R (')
+        #char = DFA("start number ')'", {'start': start, 'number': self.number})
+        #Char = DFA("char!C H R '(' number ')'", {'char': self.char, 'number': self.number})
+        #basicset = DFA('string!ident!(Char [.. Char])', {'Char': Char})
+
 
     def CHARACTERS(self):
         '''
@@ -159,21 +167,26 @@ class Scanner():
             SetDecl = ident '=' Set.
             Set = BasicSet { ('+'!'-') BasicSet }.
             BasicSet = string ! ident ! Char [".." Char].
-            Char = char ! "CHR" '(' number ')'.
+            Char = char!"CHR"'(' number ')'.
         '''
         characters = {}
         token = self.peek()
         state = 0
-
-        char = DFA("char!CHR'('number')'")
-        char = self.char
-        basicset = DFA('string!ident', {'string': self.string, 'ident': self.ident, 'char':self.char})
+        periods = DFA('. .')
+        start = DFA(['CHR('])
+        number = DFA("number ')'", {'number': self.number})
+        Char = DFA("char!Char", {'char': self.char, 'Char': DFA(['CHR('])})
+        
+        basicset = DFA('string!ident!(Char [".." Char])', {'string': self.string, 'ident': self.ident, 'Char':Char})
         mySet = DFA('BasicSet {(+!-) BasicSet}',{'BasicSet': basicset})
 
         M = {
-            'S': [(self.string, ['B', "S'"]), (self.ident, ['B',"S'"]), (char, ['B',"S'"])], 
-            'B': [(self.string, ['s']), (self.ident, ['i']), (char, ['c'])], 
-            "S'": [(self.plus, ['+', 'B']), (self.minus, ['-', 'B']), (self.period, [])]
+            'S': [(self.string, ['B', "S'"]), (self.ident, ['B',"S'"]), (Char, ['B', "S'"])], 
+            'B': [(self.string, ['s']), (self.ident, ['i']), (Char, ['C', "B'"])], 
+            "B'": [(periods, ['..', 'C']), (self.period, [])],
+            'C': [(self.char, ['c']), (start, ['CHR(', 'N'])],
+            'N': [(number, ['n'])],
+            "S'": [(self.plus, ['+', 'B']), (self.minus, ['-', 'B']), (self.period, []), (periods, []) ]
         }
         while token.code < 50:
             token = self.scan()
@@ -207,7 +220,7 @@ class Scanner():
                 error = True
                 character = []
                 while 0 < len(stack) and error:
-                    if x in ['i', 's', 'c', '+', '-']:
+                    if x in ['i', 's', 'c', '+', '-', '..', 'n', 'CHAR(']:
                         terminal = stack.pop(0)
                         value = inputs.pop(0)
                         character = character + [value]
@@ -305,7 +318,7 @@ class Scanner():
             'E': [(self.string, ['T',"E'"]), (self.ident, ['T',"E'"]), (self.char, ['T',"E'"]), (llaveA, ['T',"E'"]), (parentesisA, ['T',"E'"]), (corchetesA, ['T',"E'"]), (parentesisC, ['T',"E'"]), (corchetesC, ['T',"E'"]), (llaveC, ['T',"E'"])], 
             "E'": [(orDFA, ['|','T',"E'"]), (parentesisC, []), (corchetesC, []), (llaveC, []), (self.period, [])], 
             'T': [(self.string, ['F', "T'"]), (self.ident, ['F', "T'"]), (self.char, ['F', "T'"]), (llaveA, ['F', "T'"]), (parentesisA, ['F', "T'"]), (corchetesA, ['F', "T'"])], 
-            "T'": [(self.string, ['F', "T'"]), (self.ident, ['F', "T'"]), (self.char, ['F', "T'"]), (llaveA, ['F', "T'"]), (parentesisA, ['F', "T'"]), (corchetesA, ['F', "T'"]), (parentesisC, []), (corchetesC, []), (llaveC, []), (self.period, [])], 
+            "T'": [(self.string, ['F', "T'"]), (self.ident, ['F', "T'"]), (self.char, ['F', "T'"]), (llaveA, ['F', "T'"]), (parentesisA, ['F', "T'"]), (corchetesA, ['F', "T'"]), (parentesisC, []), (corchetesC, []), (llaveC, []), (self.period, []), (orDFA, [])], 
             'F': [(self.string, ['S']), (self.ident, ['S']), (self.char, ['S']), (parentesisA, ['(', 'E', ')']), (corchetesA, ['[', 'E', ']']), (llaveA, ['{', 'E', '}'])],
             'S': [(self.string, ['s']), (self.ident, ['i']), (self.char, ['c'])],
         }
@@ -387,10 +400,12 @@ class Scanner():
             print("expected compiler")
             return
         token = self.scan()
+        print(token.val)
         if (self.ident.check(token.val)):
             print('COMPILER started')
             name = token.val
             token = self.scan()
+            print(token.val)
             if (token.val == 'CHARACTERS'):
                 print('CHARACTERS started')
                 self.characters = self.CHARACTERS()
@@ -441,13 +456,33 @@ class Scanner():
         self.buffer.resetPeek()
     
     def test(self, file):
-        print('')
+        file = open(file, 'r')
+        words = []
+        for text in file.readlines():
+            line = text.split()
+        file.close()
+        test = 'abcdef1234567'
+        tokens = {
+            'letter': DFA('a!b!c'),
+            'digit': DFA('0!1!2!3'),
+        }
+        i = 0
+        while i < len(test):
+            for ident in tokens.keys():
+                if tokens[ident].check(test[i]):
+                    print('<',ident,',',test[i],'>')
+            i += 1
     
+    def translate(self, target):
+        f = open(target, "a")
+        f.write("import java.io.*;")
+        f.close()
 
 
 def main():
-    scanner = Scanner("./tests/Aritmetica.ATG")
+    #scanner = Scanner("./tests/test3.txt")
     #scanner.COMPILER()
+    scanner.translate('target/target.java')
     #scanner.test('./inputs/input1.txt')
     #args = scanner.start()
     

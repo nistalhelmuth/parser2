@@ -1,21 +1,9 @@
 digraph finite_state_machine {
 	rankdir=LR size="8,5"
 	node [shape=doublecircle]
-	D
+	B
 	node [shape=circle]
-	A -> B [label="'"]
-	A -> C [label=noApostrophe]
-	A -> D [label="CHR("]
-	B -> C [label="'"]
-	B -> E [label=noApostrophe]
-	B -> C [label="CHR("]
-	C -> C [label="'"]
-	C -> C [label=noApostrophe]
-	C -> C [label="CHR("]
-	D -> C [label="'"]
-	D -> C [label=noApostrophe]
-	D -> C [label="CHR("]
-	E -> D [label="'"]
-	E -> C [label=noApostrophe]
-	E -> C [label="CHR("]
+	A -> B [label="-"]
+	B -> C [label="-"]
+	C -> C [label="-"]
 }

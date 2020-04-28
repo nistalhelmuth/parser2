@@ -2,6 +2,11 @@ import string
 from utils.dfa import DFA
 import string as strDefinition
 
+def letterList (start, end):
+    a = ' ' + string.ascii_uppercase + string.ascii_lowercase
+    direction = 1 if start < end else -1
+    return a[a.index(start):a.index(end) + direction:direction]
+
 class Token():
     def __init__(self, code, val, pos=None, charPos=None, line=None, col=None):
         self.code = code                   # token code (EOF has the code 0)
@@ -72,7 +77,6 @@ class Buffer():
             new_line = []
             for i in range(len(line)):
                 new_line = new_line + clean(line[i])
-            print(new_line)
             words = words + new_line
         file.close()
         self.currentWord =  Node(words)
@@ -186,7 +190,7 @@ class Scanner():
             "B'": [(periods, ['..', 'C']), (self.period, [])],
             'C': [(self.char, ['c']), (start, ['CHR(', 'N'])],
             'N': [(number, ['n'])],
-            "S'": [(self.plus, ['+', 'B']), (self.minus, ['-', 'B']), (self.period, []), (periods, []) ]
+            "S'": [(self.plus, ['+', 'B', "S'"]), (self.minus, ['-', 'B', "S'"]), (self.period, []), (periods, []) ]
         }
         while token.code < 50:
             token = self.scan()
@@ -218,17 +222,34 @@ class Scanner():
                 stack = ['S', '.']
                 x = stack[0]
                 error = True
-                character = []
+                totalCharacters = set()
+                #character = []
+                operator = ''
                 while 0 < len(stack) and error:
                     if x in ['i', 's', 'c', '+', '-', '..', 'n', 'CHAR(']:
                         terminal = stack.pop(0)
                         value = inputs.pop(0)
-                        character = character + [value]
-                        #if x == 'i':
-                        #    character = character + characters[value]
-                        #if x == 's':
-                        #    character = character + [value]
-                        # print('match', x)
+                        #character = character + [value]
+                        if x == 'i' and value in characters.keys():
+                            character = characters[value]
+                        elif x == 's':
+                            character = set(value[1:-1])
+                        elif x == 'c':
+                            character = value[1:-1]
+                        
+                        if x in ['+','-','..']:
+                            operator = x
+                        elif operator == '':
+                            totalCharacters = character
+                        elif operator == '+':
+                            operator = ''
+                            totalCharacters = totalCharacters.union(character)
+                        elif operator == '-':
+                            operator = ''
+                            totalCharacters = totalCharacters.difference(character)
+                        elif operator == '..':
+                            operator = ''
+                            totalCharacters = set(letterList(totalCharacters, character))
                         a = inputs[0]
                     elif x in M.keys():
                         for option in M[x]:
@@ -243,7 +264,7 @@ class Scanner():
                 if error:
                     print("error")
                 else:
-                    characters[name] = character
+                    characters[name] = totalCharacters
                     print("CHARACTER ", name, "ADDED")
                 state = 0
                 token = self.peek()
@@ -379,7 +400,11 @@ class Scanner():
                 if error:
                     print("error")
                 else:
-                    tokens[name] = (flag, token)
+                    if flag:
+                        tokens[name] = ("true", token)
+                    else:
+                        tokens[name] = ("false", token)
+
                     print("KEYWORD ", name, "ADDED")
 
                 state = 0
@@ -461,23 +486,68 @@ class Scanner():
         for text in file.readlines():
             line = text.split()
         file.close()
-        test = 'abcdef1234567'
+        test = 'abcdef1234567asddasd'
         tokens = {
             'letter': DFA('a!b!c'),
             'digit': DFA('0!1!2!3'),
         }
         i = 0
+        buff = ''
         while i < len(test):
+            buff = buff + test[i]
             for ident in tokens.keys():
-                if tokens[ident].check(test[i]):
+                if tokens[ident].check(buff):
                     print('<',ident,',',test[i],'>')
+                    buff = ''
             i += 1
+
+
+    def translate(self, target):
+        def characters(f):
+            f.write("\n")
+            for key in self.characters.keys():
+                f.write("class %s {\n" % (key))
+                values = ''
+                for value in self.characters[key]:
+                    values = values + value
+                f.write('String set = "%s";\n' % (''.join(list(values))))
+                f.write("}\n")
+                f.write("\n")
+        
+        def keywords(f):
+            f.write("\n")
+            f.write("Dictionary keywords = new Hashtable();\n")
+            for key in self.keywords.keys():
+                f.write('keywords.put("%s", "%s");\n' % (key, self.keywords[key]))
+            f.write("\n")
+        
+        def tokens(f):
+            f.write("\n")
+            for key in self.tokens.keys():
+                f.write('%s = new DFA(%s, "%s");\n' % (key, self.tokens[key][0], ''.join(self.tokens[key][1])))
+            f.write("\n")
+
+        f = open('./target/%s.java' % (target), "w")
+        f.write("import java.io.*;\n")
+        f.write("import java.util.*;\n")
+        characters(f)
+        f.write("public class %s\n" % (target))
+        f.write("{\n")
+        f.write("public static void main(String[] args)\n")
+        f.write("{\n")
+        keywords(f)
+
+        tokens(f)
+        f.write("System.out.println(%s);\n" % ('"Hello World"'))
+        f.write("}\n")
+        f.write("}\n")
+        f.close()
 
 
 def main():
     scanner = Scanner("./tests/test3.txt")
     scanner.COMPILER()
-    scanner.test('inputs/input1.txt')
+    scanner.translate('Target')
     #scanner.test('./inputs/input1.txt')
     #args = scanner.start()
     
