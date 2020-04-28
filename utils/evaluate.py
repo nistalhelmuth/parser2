@@ -8,7 +8,7 @@ class Node():
             self.value = words[0]
             self.next = Node(words[1:])
 
-def evaluate(text, tokens):
+def evaluate(text, tokens, keywords):
     start = copy.deepcopy(tokens)
     currentValue = text
     nextValue = text
@@ -25,8 +25,9 @@ def evaluate(text, tokens):
                     test = nextValue.value
                     last = {
                         'name': name,
-                        'text': copy.deepcopy(token[2]),
-                        'token': (token[0], newState, token[2])
+                        'text': ''.join(copy.deepcopy(token[2])),
+                        'token': (token[0], newState, token[2]),
+                        'keywords': token[3],
                     }
             else:
                 pull.append(name)
@@ -43,7 +44,10 @@ def evaluate(text, tokens):
                     if value == currentValue.value:
                         currentValue = currentValue.next
                         test = test + value
-                print('TOKEN FOUND', last)
+                if last['keywords'] and last['text'] in keywords.keys():
+                    print('FOUND KEYWORD', keywords[last['text']])
+                else:
+                    print('TOKEN FOUND', last)
                 last = {}
             else:
                 print('ERORR WITH', currentValue.value)
