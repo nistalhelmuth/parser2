@@ -240,6 +240,24 @@ class DFA:
         if s in self.accept:
             return True
         return False
+    
+    def slowCheck(self, letter, state = 'A'):
+        def new_move(state, transitions, value):
+            any_atr = set(strDefinition.printable)
+            table = {'noQuote': set(strDefinition.printable).difference(set('"')), 'noApostrophe': set(strDefinition.printable).difference(set("'"))}
+
+            for key in transitions[state].keys():
+                if key in table.keys() and value in table[key]:
+                    return transitions[state][key]
+            if value in transitions[state].keys():
+                return transitions[state][value]
+            
+            return None
+        
+        s = new_move(state, self.transitions, letter)
+        if s in self.accept:
+            return s,True
+        return s,False
 
 
 #tokenFactor = DFA("test|(< TokenExpr >)")

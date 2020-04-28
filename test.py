@@ -19,11 +19,11 @@ class Token():
 
 class Node():
     def __init__(self, words):
-        if len(words) == 0:
-            return
-        self.value = words[0]
+        self.value = None
         self.next = None
-        self.next = Node(words[1:])
+        if len(words) != 0:
+            self.value = words[0]
+            self.next = Node(words[1:])
         
 
 class Buffer():
@@ -535,9 +535,20 @@ class Scanner():
                         dependencies = dependencies+", '"+char+"': "+char
                 f.write("%s = DFA('%s', {%s})\n" % (key, ''.join(self.tokens[key][1]), dependencies))
             f.write("\n")
-
+            f.write("tokens = {")
+            for key in self.tokens.keys():
+                f.write("'%s': (%s, 'A', [])," % (key, key))
+            f.write("}")
+            f.write("\n")
+        
+        def readFile():
+            f.write("file = open('inputs/input1.txt', 'r')\n")
+            f.write("text = Node(''.join(file.read().splitlines()))\n")
+            f.write("file.close()\n")
+        
         f = open('./%s.py' % (target), "w")
         f.write("from utils.dfa import DFA\n")
+        f.write("from utils.evaluate import evaluate, Node\n")
         f.write("\n")
 
         characters(f)
@@ -545,6 +556,10 @@ class Scanner():
         keywords(f)
 
         tokens(f)
+
+        readFile()
+    
+        f.write("evaluate(text, tokens)\n")
 
         f.close()
 
